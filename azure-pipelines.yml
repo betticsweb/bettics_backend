@@ -1,0 +1,132 @@
+trigger:
+  branches:
+    include:
+      - refs/heads/main
+      - refs/heads/dev
+
+pr:
+  branches:
+    include:
+      - refs/heads/main
+      - refs/heads/dev
+    exclude:
+      - refs/heads/*
+
+variables:
+  group: EnviromentDev
+  SourceBranchName: $[variables['System.PullRequest.TargetBranch']] 
+  TargetBranch: $[variables['Build.TargetBranch']] 
+
+stages:
+  - stage: build
+    displayName: "Compilar"
+    jobs:
+      - job: build_test
+        displayName: "Build and test"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: "10.x"
+            displayName: "Install Node.js"
+          - script: |
+              npm install
+              npm run build
+            displayName: "npm install, build"
+  - stage: ToDev
+    displayName: "ToDev"
+    dependsOn: build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev') )
+    jobs:
+      - deployment: publishinternal
+        environment: dev
+      - job: Job_1
+        displayName: Script hacia Heroku
+        pool:
+          vmImage: "ubuntu-latest"
+        variables:
+          - group: LibraryDev
+        steps:
+          - checkout: self
+          - bash: echo $(HEROKU_Branch_Name)
+          - bash: echo variables['System.PullRequest.TargetBranch']
+          - bash: echo $(SourceBranchName)
+          - bash: echo $(TargetBranch)
+          - task: PowerShell@2
+            displayName: PowerShell Script
+            inputs:
+              targetType: inline
+              filePath: $(System.DefaultWorkingDirectory)
+              script: >-
+                git checkout $(HEROKU_Branch_Name)
+
+                git remote add heroku https://heroku:$(HEROKU_API_KEY)@git.heroku.com/$(HEROKU_APP_ACCESOS).git
+
+                git push -f heroku $(HEROKU_Branch_Name):main
+
+                Invoke-WebRequest -UseBasicParsing -Uri "https://api.heroku.com/apps/$(HEROKU_APP_ACCESOS)/config-vars" `
+                -Method "PATCH" `
+                -WebSession $session `
+                -Headers @{
+                "authority"="api.heroku.com"
+                  "method"="PATCH"
+                  "path"="/apps/$(HEROKU_APP_ACCESOS)/config-vars"
+                  "scheme"="https"
+                  "accept"="application/vnd.heroku+json; version=3"
+                  "accept-encoding"="gzip, deflate, br"
+                  "accept-language"="es,en-US;q=0.9,en;q=0.8,fr;q=0.7"
+                  "authorization"="Bearer $(HEROKU_API_KEY)"
+                  "sec-fetch-dest"="empty"
+                  "sec-fetch-mode"="cors"
+                  "sec-fetch-site"="cross-site"
+                } `
+                -ContentType "application/json" `
+                -Body "{`"PORT`":`"$(PORT_ACCESOS)`",`"USR_NAME`":`"$(USR_NAME)`",`"PSS_WORD`":`"$(PSS_WORD)`",`"CLU`":`"$(CLU)`",`"KEY_JWT`":`"$(KEY_JWT)`",`"URI_INV`":`"$(URI_INV)`",`"URI_ACCESOS`":`"$(URI_ACCESOS)`",`"ADMIN_GRU`":`"$(ADMIN_GRU)`",`"ADMIN_DB`":`"$(ADMIN_DB)`"}"
+  - stage:
+    displayName: "ToProduction"
+    dependsOn: build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: publishinternal
+        environment: prod
+      - job: Job_1
+        displayName: Script hacia Heroku
+        pool:
+          vmImage: "ubuntu-latest"
+        variables:
+          - group: LibraryProd
+        steps:
+          - checkout: self
+          - bash: echo $(HEROKU_Branch_Name)
+          - task: PowerShell@2
+            displayName: PowerShell Script
+            inputs:
+              targetType: inline
+              filePath: $(System.DefaultWorkingDirectory)
+              script: >-
+                git checkout $(HEROKU_Branch_Name)
+
+                git remote add heroku https://heroku:$(HEROKU_API_KEY)@git.heroku.com/$(HEROKU_APP_ACCESOS).git
+
+                git push -f heroku $(HEROKU_Branch_Name):main
+
+                Invoke-WebRequest -UseBasicParsing -Uri "https://api.heroku.com/apps/$(HEROKU_APP_ACCESOS)/config-vars" `
+                -Method "PATCH" `
+                -WebSession $session `
+                -Headers @{
+                "authority"="api.heroku.com"
+                  "method"="PATCH"
+                  "path"="/apps/$(HEROKU_APP_ACCESOS)/config-vars"
+                  "scheme"="https"
+                  "accept"="application/vnd.heroku+json; version=3"
+                  "accept-encoding"="gzip, deflate, br"
+                  "accept-language"="es,en-US;q=0.9,en;q=0.8,fr;q=0.7"
+                  "authorization"="Bearer $(HEROKU_API_KEY)"
+                  "sec-fetch-dest"="empty"
+                  "sec-fetch-mode"="cors"
+                  "sec-fetch-site"="cross-site"
+                } `
+                -ContentType "application/json" `
+                -Body "{`"PORT`":`"$(PORT_ACCESOS)`",`"USR_NAME`":`"$(USR_NAME)`",`"PSS_WORD`":`"$(PSS_WORD)`",`"CLU`":`"$(CLU)`",`"KEY_JWT`":`"$(KEY_JWT)`",`"URI_INV`":`"$(URI_INV)`",`"URI_ACCESOS`":`"$(URI_ACCESOS)`",`"ADMIN_GRU`":`"$(ADMIN_GRU)`",`"ADMIN_DB`":`"$(ADMIN_DB)`"}"
+

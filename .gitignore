@@ -1,0 +1,12 @@
+node_modules/
+node_modules/*
+
+# Environment variables - NEVER COMMIT THESE
+.env
+.env.local
+.env.*.local
+*.env
+
+# Keep example files
+.env.example
+.env.template

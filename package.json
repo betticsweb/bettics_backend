@@ -1,0 +1,40 @@
+{
+    "name": "apierpaccesos",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "start": "node server.js",
+        "startdev": "nodemon server.js",
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "build": "echo 'build script executed'"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@sendgrid/mail": "^7.7.0",
+        "axios": "^0.27.2",
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "csv-parse": "^6.1.0",
+        "data-model-mapper": "^0.1.1",
+        "dotenv": "^10.0.0",
+        "express": "^4.17.1",
+        "express-validator": "^6.12.2",
+        "fuse.js": "^7.1.0",
+        "http-client-factory": "^0.3.1",
+        "jsonwebtoken": "^8.5.1",
+        "mongoose": "^6.0.9",
+        "mongoose-aggregate-paginate-v2": "^1.0.6",
+        "mongoose-paginate-v2": "^1.4.2",
+        "multer": "^2.0.2",
+        "node-cache": "^5.1.2",
+        "nodejs-base64": "^2.0.0",
+        "pad-left": "^2.1.0",
+        "string-similarity": "^4.0.4"
+    },
+    "devDependencies": {
+        "cross-env": "^10.1.0",
+        "nodemon": "^2.0.15"
+    }
+}
