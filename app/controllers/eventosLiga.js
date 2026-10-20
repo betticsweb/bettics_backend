@@ -40,7 +40,7 @@ exports.insertDataMasivo = async(req, res, next) => {
 exports.getCriterio = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
 
         let filtroInit = {}
         if (req.query.strSeason != null && req.query.strSeason != 'null') {
@@ -144,7 +144,7 @@ exports.getCriterio = async(req, res, next) => {
 exports.getMaestros = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
 
         // Primero validamos que tenga una suscripcion.
         const Usuario = getModel(conn, consta.SchemaName.usuario);
@@ -159,9 +159,10 @@ exports.getMaestros = async(req, res, next) => {
                 resStatus: 'Debe registrar una membresía o un pago para visualizar esta sección de información.'
             });
 
-        const cacheKey = consta.cacheController.eventosLiga.maestros;
+        // Separate the historical data cache from the previous eventosLigaProb source.
+        const cacheKey = `${consta.cacheController.eventosLiga.maestros}eventosLiga`;
         const maestrosCache = await cacheProvider.instance().get(cacheKey);
-        if (maestrosCache)
+        if (Array.isArray(maestrosCache) && maestrosCache.length > 0)
             return res.send({
                 resStatus: 'ok',
                 strLeague: maestrosCache
@@ -173,7 +174,11 @@ exports.getMaestros = async(req, res, next) => {
             EventosLiga.distinct("strLeague", query)
         ])
 
-        cacheProvider.instance().set(cacheKey, strLeague, 172800); // 2880 segundos correspondientea 2 dias
+        // Direct ETL writes do not invalidate this process-local cache.
+        // Refresh nonempty lists after five minutes; never retain an empty list.
+        if (strLeague.length > 0) {
+            cacheProvider.instance().set(cacheKey, strLeague, 300);
+        }
 
         res.send({
             resStatus: 'ok',
@@ -189,7 +194,7 @@ exports.getMaestros = async(req, res, next) => {
 exports.getEquipos = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
 
         const query = { activo: true };
 
@@ -234,7 +239,7 @@ exports.getTemporadas = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
 
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
 
         const query = { activo: true, strLeague: req.query.strLeague };
 
