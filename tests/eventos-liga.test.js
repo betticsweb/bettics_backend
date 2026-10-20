@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const cacheKey = 'eventosliga_maestros_eventosLiga';
+const cacheKey = 'eventosliga_maestros_eventosLigaProb';
 const fixture = [
     { strLeague: 'Liga A', strSeason: '2023-2024', idHomeTeam: '1', strHomeTeam: 'Local', idAwayTeam: '2', strAwayTeam: 'Visitante', dateEvent: '2023-08-11', intHomeScore: 1, intAwayScore: 2, cornerKicksHome: 3, cornerKicksAway: 7, activo: true },
     { strLeague: 'Liga A', strSeason: '2024-2025', idHomeTeam: '2', strHomeTeam: 'Visitante', idAwayTeam: '1', strAwayTeam: 'Local', dateEvent: '2024-08-11', intHomeScore: 0, intAwayScore: 1, activo: true },
@@ -22,7 +22,7 @@ function matches(row, filter) {
 }
 
 function harness({ rows = fixture, cached = [], user = { tipoLicencia: 'gratis' } } = {}) {
-    const data = { eventosLiga: rows, eventosLigaProb: [] };
+    const data = { eventosLiga: [{ ...fixture[0], strLeague: 'Liga histórica' }], eventosLigaProb: rows };
     const cache = new Map(cached);
     const reads = [], writes = [], cacheWrites = [];
     let closed = 0;
@@ -69,10 +69,10 @@ function harness({ rows = fixture, cached = [], user = { tipoLicencia: 'gratis' 
     } };
 }
 
-test('loads active historical leagues despite empty probability collection and stale legacy cache', async () => {
-    const h = harness({ cached: [['eventosliga_maestros_', []]] });
+test('loads active ETL leagues instead of historical leagues and ignores legacy cache', async () => {
+    const h = harness({ cached: [['eventosliga_maestros_', []], ['eventosliga_maestros_eventosLiga', ['Liga histórica']]] });
     assert.deepEqual((await h.call('getMaestros')).body, { resStatus: 'ok', strLeague: ['Liga A'] });
-    assert.deepEqual(h.reads, ['eventosLiga']);
+    assert.deepEqual(h.reads, ['eventosLigaProb']);
     assert.deepEqual(h.writes, []);
     assert.equal(h.cacheWrites[0].key, cacheKey);
     assert.equal(h.cacheWrites[0].ttl, 300);
@@ -83,7 +83,7 @@ test('does not retain empty lists; a later ETL insert is immediately visible', a
     const h = harness({ rows: [], cached: [[cacheKey, []]] });
     assert.deepEqual((await h.call('getMaestros')).body.strLeague, []);
     assert.equal(h.cacheWrites.length, 0);
-    h.data.eventosLiga.push(fixture[0]);
+    h.data.eventosLigaProb.push(fixture[0]);
     assert.deepEqual((await h.call('getMaestros')).body.strLeague, ['Liga A']);
 });
 
@@ -95,13 +95,13 @@ test('reuses a nonempty source-specific cache and refreshes when it expires', as
     assert.deepEqual((await h.call('getMaestros')).body.strLeague, ['Liga A']);
 });
 
-test('returns seasons and grouped teams from the same historical collection', async () => {
+test('returns seasons and grouped teams from the same ETL collection', async () => {
     const h = harness();
     assert.deepEqual((await h.call('getTemporadas', { strLeague: 'Liga A' })).body.strSeason, ['2023-2024', '2024-2025']);
     const result = (await h.call('getEquipos', { strLeague: 'Liga A', strSeason: '2023-2024' })).body;
     assert.deepEqual(result.strHomeTeam, [{ _id: { strHomeTeam: 'Local', idHomeTeam: '1' } }]);
     assert.deepEqual(result.strAwayTeam, [{ _id: { strAwayTeam: 'Visitante', idAwayTeam: '2' } }]);
-    assert.ok(h.reads.every(collection => collection === 'eventosLiga'));
+    assert.ok(h.reads.every(collection => collection === 'eventosLigaProb'));
     assert.deepEqual(h.writes, []);
 });
 
@@ -113,7 +113,7 @@ test('historical detail preserves season/team filtering and returns scores and c
         assert.equal(result[key][0].intHomeScore, 1);
         assert.equal(result[key][0].cornerKicksAway, 7);
     }
-    assert.ok(h.reads.every(collection => collection === 'eventosLiga'));
+    assert.ok(h.reads.every(collection => collection === 'eventosLigaProb'));
     assert.deepEqual(h.writes, []);
     const allSeasons = (await h.call('getCriterio', { strLeague: 'Liga A', strSeason: 'null', idHomeTeam: '1', idAwayTeam: '2' })).body;
     assert.equal(allSeasons.partidosLosDosEquipos.length, 2);
@@ -134,8 +134,9 @@ test('missing user still returns 404', async () => {
 });
 
 test('legacy import destination remains unchanged; no migration or historical writes', async () => {
-    const h = harness();
+    const h = harness({ cached: [[cacheKey, ['Liga anterior']]] });
     await h.call('insertDataMasivo', {}, [{ strLeague: 'Import fixture' }]);
     assert.deepEqual(h.writes, [['delete', 'eventosLigaProb'], ['insert', 'eventosLigaProb']]);
-    assert.equal(h.data.eventosLiga.length, fixture.length);
+    assert.equal(h.data.eventosLiga.length, 1);
+    assert.equal(h.cache.has(cacheKey), false);
 });

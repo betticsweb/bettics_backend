@@ -31,6 +31,7 @@ exports.insertDataMasivo = async(req, res, next) => {
 
         const cacheKey = consta.cacheController.eventosLiga.maestros;
         cacheProvider.instance().del(cacheKey);
+        cacheProvider.instance().del(`${cacheKey}eventosLigaProb`);
         return res.json(result)
     } catch (err) {
         return errorMiddleware(err, req, res, next);
@@ -40,7 +41,7 @@ exports.insertDataMasivo = async(req, res, next) => {
 exports.getCriterio = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
 
         let filtroInit = {}
         if (req.query.strSeason != null && req.query.strSeason != 'null') {
@@ -144,7 +145,7 @@ exports.getCriterio = async(req, res, next) => {
 exports.getMaestros = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
 
         // Primero validamos que tenga una suscripcion.
         const Usuario = getModel(conn, consta.SchemaName.usuario);
@@ -159,8 +160,8 @@ exports.getMaestros = async(req, res, next) => {
                 resStatus: 'Debe registrar una membresía o un pago para visualizar esta sección de información.'
             });
 
-        // Separate the historical data cache from the previous eventosLigaProb source.
-        const cacheKey = `${consta.cacheController.eventosLiga.maestros}eventosLiga`;
+        // Separate the ETL source cache from both legacy and historical source caches.
+        const cacheKey = `${consta.cacheController.eventosLiga.maestros}eventosLigaProb`;
         const maestrosCache = await cacheProvider.instance().get(cacheKey);
         if (Array.isArray(maestrosCache) && maestrosCache.length > 0)
             return res.send({
@@ -194,7 +195,7 @@ exports.getMaestros = async(req, res, next) => {
 exports.getEquipos = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
 
         const query = { activo: true };
 
@@ -239,7 +240,7 @@ exports.getTemporadas = async(req, res, next) => {
     const conn = conectionManager(req);
     try {
 
-        const EventosLiga = getModel(conn, consta.SchemaName.eventosLiga);
+        const EventosLiga = getModel(conn, consta.SchemaName.eventosLigaProb);
 
         const query = { activo: true, strLeague: req.query.strLeague };
 
