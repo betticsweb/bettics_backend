@@ -31,7 +31,7 @@ def get(path):
         return None, None
 
 
-def inspect():
+def inspect(include_config=False):
     report = {"app": APP, "production_mutations": False}
     status, app = get("/apps/" + APP)
     report["app_http"] = status
@@ -52,21 +52,34 @@ def inspect():
             report["source_repository_hint"] = "/".join(parts[:2]).removesuffix(".git")
     status, releases = get("/apps/" + APP + "/releases")
     report["releases_http"] = status
+    report["current_release_verified"] = False
     if isinstance(releases, list) and releases:
-        release = max(releases, key=lambda item: item.get("version", 0))
-        report["latest_release_version"] = release.get("version")
-        slug_id = (release.get("slug") or {}).get("id")
-        if isinstance(slug_id, str) and re.match(r"^[a-fA-F0-9-]{36}$", slug_id):
-            slug_status, slug = get("/apps/" + APP + "/slugs/" + slug_id)
-            report["slug_http"] = slug_status
-            commit = slug.get("commit") if isinstance(slug, dict) else None
-            report["deployed_slug_commit"] = commit if isinstance(commit, str) and re.match(r"^[a-fA-F0-9]{40}$", commit) else None
-    status, config = get("/apps/" + APP + "/config-vars")
-    report["config_http"] = status
-    if status == 200 and isinstance(config, dict):
-        report["environment_presence"] = {key: bool(config.get(key)) for key in ("USR_NAME", "PSS_WORD", "CLU", "BETTICS_ETL_TOKEN")}
+        successful = [item for item in releases if item.get("status") == "succeeded"]
+        active = [item for item in successful if item.get("current") is True]
+        if successful:
+            report["latest_successful_release_in_response"] = max(successful, key=lambda item: item.get("version", 0)).get("version")
+        # A failed/pending release or a paginated list is not proof of what is live.
+        # If Heroku does not expose a unique current flag, require dashboard evidence.
+        if len(active) == 1:
+            release = active[0]
+            report["current_release_verified"] = True
+            report["current_release_version"] = release.get("version")
+            slug_id = (release.get("slug") or {}).get("id")
+            if isinstance(slug_id, str) and re.match(r"^[a-fA-F0-9-]{36}$", slug_id):
+                slug_status, slug = get("/apps/" + APP + "/slugs/" + slug_id)
+                report["slug_http"] = slug_status
+                commit = slug.get("commit") if isinstance(slug, dict) else None
+                report["deployed_slug_commit"] = commit if isinstance(commit, str) and re.match(r"^[a-fA-F0-9]{40}$", commit) else None
+    if include_config:
+        status, config = get("/apps/" + APP + "/config-vars")
+        report["config_http"] = status
+        if status == 200 and isinstance(config, dict):
+            report["environment_presence"] = {key: bool(config.get(key)) for key in ("USR_NAME", "PSS_WORD", "CLU", "BETTICS_ETL_TOKEN")}
     return report
 
 
 if __name__ == "__main__":
-    print(json.dumps(inspect(), indent=2))
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config-presence", action="store_true", help="Opt in to a config-vars GET; prints presence only. Not needed to compare source.")
+    print(json.dumps(inspect(include_config=parser.parse_args().config_presence), indent=2))

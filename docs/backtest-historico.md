@@ -171,3 +171,7 @@ La imagen utilizada localmente verificó el digest `sha256:c53852c00c23ca9f23fc3
 Cobertura Node: contrato, segmentos, HOME/null, importación/reenvío/corrección de cuota, índice único real, concurrencia, errores parciales reales de MongoDB, fallos de conexión/acuse, autenticación, lectura con JWT, no mezcla de contextos y auditoría de solo lectura. Conserva las 8 pruebas existentes.
 
 Cobertura Python: DRY_RUN sin red, HOME/NaN/null, lotes de 250, validaciones, contadores, reintentos limitados, fallo seguro y rechazo de redirecciones. Los transportes de carga Python son simulados. El caso de 224 pronósticos/207 partidos usa datos **sintéticos**, no el CSV real del usuario.
+
+## Confirmación posterior del método de despliegue
+
+El usuario confirmó **Heroku Git**, sin integración GitHub directa. Se conserva ese mecanismo. La comparación del release activo y el procedimiento para aislar el patch están en [heroku-git-backtest-release.md](heroku-git-backtest-release.md). La inspección de Config Vars pasó a ser optativa (`--config-presence`); el chequeo de fuente no la necesita.
