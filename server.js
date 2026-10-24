@@ -28,6 +28,7 @@ function validateEnvironment() {
 
 validateEnvironment();
 const errorMiddleware = require('./app/middleware/errors')
+const backtestRouters = require('./app/routes/backtest')
 const loginRouters = require('./app/routes/login')
 const usuarioRouters = require('./app/routes/usuario')
 const recomendacionesRouters = require('./app/routes/recomendaciones')
@@ -144,6 +145,8 @@ class Server {
     routes() {
 
         // this.app.use(this.authPath, require('../routes/auth'));
+        this.app.use('/api/backtest', backtestRouters.bodyError)
+        this.app.use(backtestRouters)
         this.app.use(loginRouters, errorMiddleware)
         this.app.use(usuarioRouters, errorMiddleware)
         this.app.use(culqiRouters, errorMiddleware)
