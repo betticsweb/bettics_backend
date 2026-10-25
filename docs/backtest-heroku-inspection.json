@@ -1,0 +1,9 @@
+{
+  "app": "apianabet",
+  "production_mutations": false,
+  "app_http": 200,
+  "app_name_matches": true,
+  "builds_http": 401,
+  "releases_http": 401,
+  "config_http": 401
+}
