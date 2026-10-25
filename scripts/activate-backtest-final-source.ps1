@@ -62,7 +62,8 @@ try {
     Invoke-Bt heroku config:set BETTICS_RESULTS_FINAL_FIELDS_CONFIRMED=eventosLigaProb BETTICS_BACKTEST_WRITES_ENABLED=false -a apianabet
     $actual=Read-BtResult
     Save-BtReport $actual 'production.json'
-    if (!$actual.apto_publicar -or $actual.resumen.evaluados -ne $preview.resumen.evaluados -or $actual.resumen.ganancia -ne $preview.resumen.ganancia) {
+    $gainDifference=[Math]::Abs([double]$actual.resumen.ganancia-[double]$preview.resumen.ganancia)
+    if (!$actual.apto_publicar -or $actual.resumen.evaluados -ne $preview.resumen.evaluados -or $gainDifference -gt 0.000001) {
         throw 'El resultado activo no coincide con la comprobacion previa.'
     }
     $active=@(Invoke-Bt heroku releases -a apianabet -n 1 --json | ConvertFrom-Json)[0]
