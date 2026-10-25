@@ -1,21 +1,24 @@
 'use strict';
 const { MARKETS } = require('./contract');
+const { additionalMarket, configured } = require('./market-policies');
 const { normalizeId, reconcileCandidates } = require('./history');
 const number = x => typeof x === 'number' && Number.isFinite(x);
 const score = x => number(x) && Number.isInteger(x) && x >= 0;
 function settle(p, matches, policy = {}) {
     const pending = (code, reason, extra = {}) => ({ ...p, estado: 'pendiente', cruce_confirmado: false, ...extra, codigo_pendiente: code, motivo: reason, ganancia: null, unidades: 0 });
-    const market = MARKETS[p.mercado];
-    if (!market || p.periodo !== 'FT' || p.seleccion !== market.seleccion || p.linea !== market.linea || !market.segmentos.includes(p.segmento) || !number(p.cuota) || p.cuota <= 1) return pending('pronostico_invalido', 'Pronóstico no evaluable');
+    const market = Object.hasOwn(MARKETS, p.mercado) ? MARKETS[p.mercado] : additionalMarket(p.mercado, p.version_politica, policy.markets);
+    if (!market || p.periodo !== (market.periodo || 'FT') || p.seleccion !== market.seleccion || p.linea !== market.linea || !market.segmentos.includes(p.segmento) || !number(p.cuota) || p.cuota <= 1) return pending('pronostico_invalido', 'Pronóstico no evaluable');
     const linked = reconcileCandidates(p, matches);
     if (!linked.match) return pending(linked.code, linked.reason, linked.details ? { detalle_conciliacion: linked.details } : {});
     const m = linked.match;
     const display = { cruce_confirmado: true, partido: [m.strHomeTeam, m.strAwayTeam].filter(Boolean).join(' — '), fuentes_resultado: m.__sources };
+    // No HT fields have been verified in the historical source. Never fall back to FT.
+    if (p.periodo === 'HT') return pending('ht_no_disponible', 'No hay marcadores HT verificados en las fuentes históricas', display);
     const status = m.__status;
     if (status && status !== 'FT') return pending('estado_no_evaluable', 'Estado no final, contradictorio o liquidación sin confirmar', display);
     // Status-less legacy fields require an explicit source contract, never just an old date or a nonzero score.
     if (!status && !m.__finalFieldsConfirmed) return pending('final_no_confirmado', 'Falta estado final o confirmación del contrato de marcadores históricos', display);
-    const fields = p.mercado === 'GOLES_OVER_25' ? ['intHomeScore', 'intAwayScore'] : ['cornerKicksHome', 'cornerKicksAway'];
+    const fields = (p.mercado === 'GOLES_OVER_25' || ['BTTS', 'FT_WINNER'].includes(market.family)) ? ['intHomeScore', 'intAwayScore'] : ['cornerKicksHome', 'cornerKicksAway'];
     const [h, a] = fields.map(f => m[f]);
     if (!score(h) || !score(a)) return pending('marcador_invalido', 'Marcador ausente o inválido: ' + fields.filter(f => !score(m[f])).join(', '), display);
     if (fields.some(field => !m.__confirmedFields[field])) return pending('marcador_final_no_confirmado', 'Sin confirmación final para: ' + fields.filter(field => !m.__confirmedFields[field]).join(', '), display);
@@ -24,7 +27,11 @@ function settle(p, matches, policy = {}) {
         if (policy.drawRule === 'void') return { ...row, estado: 'anulado', motivo: 'Empate: devolución según regla confirmada', ganancia: 0, unidades: 0 };
         if (policy.drawRule !== 'loss') return pending('empate_sin_regla', 'Empate en córners: liquidación sin confirmar', display);
     }
-    const win = p.mercado === 'CORNERS_OVER_85' ? h + a >= 9 : p.mercado === 'CORNERS_UNDER_105' ? h + a <= 10 : p.mercado === 'GOLES_OVER_25' ? h + a >= 3 : h > a;
+    if (market.family === 'FT_WINNER' && h === a) {
+        if (market.drawRule === 'void') return { ...row, estado: 'anulado', motivo: 'Empate: devolución según política verificada', ganancia: 0, unidades: 0 };
+        if (market.drawRule !== 'loss') return pending('empate_sin_regla', 'Empate: liquidación sin confirmar', display);
+    }
+    const win = market.family === 'BTTS' ? (p.seleccion === 'YES' ? h > 0 && a > 0 : h === 0 || a === 0) : market.family === 'FT_WINNER' ? (p.seleccion === 'HOME' ? h > a : a > h) : p.mercado === 'CORNERS_OVER_85' ? h + a >= 9 : p.mercado === 'CORNERS_UNDER_105' ? h + a <= 10 : p.mercado === 'GOLES_OVER_25' ? h + a >= 3 : h > a;
     return { ...row, estado: win ? 'acierto' : 'fallo', motivo: '', ganancia: win ? p.cuota - 1 : -1, unidades: 1 };
 }
 function metrics(rows) {
@@ -70,7 +77,9 @@ function parseQuery(q) {
     if (Object.keys(q).some(k => !allowed.includes(k)) || Object.values(q).some(v => typeof v !== 'string' || v.length > 200)) throw Error('Filtros inválidos');
     const parsed = { ...q, page: q.page === undefined ? 1 : Number(q.page), limit: q.limit === undefined ? 25 : Number(q.limit), orden: q.orden || 'roi' };
     if (!Number.isSafeInteger(parsed.page) || parsed.page < 1 || !Number.isSafeInteger(parsed.limit) || parsed.limit < 1 || parsed.limit > 100 || !['roi','aprobados','efectividad','ganancia'].includes(parsed.orden)) throw Error('Paginación u orden inválido');
-    if (q.mercado && !Object.hasOwn(MARKETS,q.mercado) || q.segmento && !['N1','N2','N3','N4'].includes(q.segmento) || q.mercado && q.segmento && !MARKETS[q.mercado].segmentos.includes(q.segmento)) throw Error('Mercado o segmento incompatible');
+    const rules = [...Object.entries(MARKETS).map(([mercado,r]) => ({ mercado, ...r })), ...configured];
+    const compatible = rules.filter(r => r.mercado === q.mercado && (!q.version_politica || !r.version_politica || r.version_politica === q.version_politica));
+    if (q.mercado && !compatible.length || q.segmento && !['N1','N2','N3','N4'].includes(q.segmento) || q.mercado && q.segmento && !compatible.some(r => r.segmentos.includes(q.segmento))) throw Error('Mercado o segmento incompatible');
     for (const k of ['desde','hasta']) if (q[k] && (!/^\d{4}-\d{2}-\d{2}$/.test(q[k]) || !Number.isFinite(Date.parse(q[k])) || new Date(q[k]).toISOString().slice(0,10) !== q[k])) throw Error('Fecha inválida');
     if (q.desde && q.hasta && q.desde > q.hasta) throw Error('Rango de fechas inválido');
     return parsed;

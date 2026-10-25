@@ -90,3 +90,15 @@ class KnimeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ExtendedPolicyTests(unittest.TestCase):
+    def test_additional_market_requires_explicit_versioned_policy(self):
+        row = dict(BASE, mercado="AMBOS_MARCAN_SI", seleccion="YES", linea=None)
+        with self.assertRaises(ValueError):
+            module.prepare_records(pd.DataFrame([row]))
+        policy = dict(mercado=row["mercado"], version_politica=row["version_politica"], family="BTTS", seleccion="YES", linea=None, segmentos=["N1"], verified=True, evidence="TEST FIXTURE ONLY")
+        self.assertEqual(module.prepare_records(pd.DataFrame([row]), {"markets":[policy]})[0]["seleccion"], "YES")
+        with self.assertRaises(ValueError):
+            module.prepare_records(pd.DataFrame([dict(row, segmento="N4")]), {"markets":[policy]})
+        with self.assertRaises(ValueError):
+            module.prepare_records(pd.DataFrame([row]), {"markets":[policy,policy]})

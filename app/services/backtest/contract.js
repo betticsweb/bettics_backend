@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { additionalMarket } = require('./market-policies');
 const FIELDS = Object.freeze(['match_id', 'fecha_partido', 'liga', 'temporada', 'mercado', 'periodo', 'seleccion', 'linea', 'segmento', 'cuota', 'version_politica', 'tipo_evaluacion']);
 const KEY_FIELDS = Object.freeze(['match_id', 'mercado', 'periodo', 'segmento', 'version_politica', 'tipo_evaluacion']);
 const UNIQUE_KEY = Object.freeze(Object.fromEntries(KEY_FIELDS.map(field => [field, 1])));
@@ -9,7 +10,7 @@ const MARKETS = Object.freeze({
     CORNERS_LOCAL_GANA: { seleccion: 'HOME', linea: null, segmentos: ['N1', 'N2', 'N3'] }
 });
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype;
-function validateRecord(input) {
+function validateRecord(input, policies) {
     const errors = [];
     if (!plain(input)) return { errors: [{ campo: 'registro', mensaje: 'Debe ser un objeto JSON.' }] };
     const row = {};
@@ -25,9 +26,9 @@ function validateRecord(input) {
     if (typeof row.liga !== 'string' || !row.liga || row.liga.length > 200) invalid('liga', 'Texto no vacío de hasta 200 caracteres requerido.');
     if (typeof row.temporada === 'number' && Number.isSafeInteger(row.temporada)) row.temporada = String(row.temporada);
     if (typeof row.temporada !== 'string' || !row.temporada || row.temporada.length > 32) invalid('temporada', 'Texto no vacío de hasta 32 caracteres requerido.');
-    const market = typeof row.mercado === 'string' && Object.prototype.hasOwnProperty.call(MARKETS, row.mercado) ? MARKETS[row.mercado] : null;
+    const market = typeof row.mercado === 'string' && Object.prototype.hasOwnProperty.call(MARKETS, row.mercado) ? MARKETS[row.mercado] : additionalMarket(row.mercado, row.version_politica, policies);
     if (!market) invalid('mercado', 'Mercado no permitido.');
-    if (row.periodo !== 'FT') invalid('periodo', 'Solo se admite FT; no se infieren datos por tiempo.');
+    if (row.periodo !== (market?.periodo || 'FT')) invalid('periodo', 'Período incompatible con la política verificada.');
     if (market && row.seleccion !== market.seleccion) invalid('seleccion', 'Selección incompatible con el mercado.');
     if (row.mercado === 'CORNERS_LOCAL_GANA' && (row.linea === '' || row.linea === undefined)) row.linea = null;
     if (market && row.linea !== market.linea) invalid('linea', 'Línea incompatible con el mercado; HOME requiere null.');
