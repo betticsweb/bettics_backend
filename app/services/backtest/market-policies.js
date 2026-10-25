@@ -1,9 +1,9 @@
 'use strict';
 // Structural market contract only. Approval policies remain exclusively in the existing R generator.
 const configured = Object.freeze([
-    {mercado:'AMBOS_MARCAN_SI',family:'BTTS',seleccion:'YES'},
-    {mercado:'GANADOR_FT_LOCAL',family:'FT_WINNER',seleccion:'HOME',drawRule:'loss'},
-    {mercado:'GANADOR_FT_VISITANTE',family:'FT_WINNER',seleccion:'AWAY',drawRule:'loss'}
+    {mercado:'BTTS_YES',family:'BTTS',seleccion:'YES'},
+    {mercado:'FT_HOME_WIN',family:'FT_WINNER',seleccion:'HOME',drawRule:'loss'},
+    {mercado:'FT_AWAY_WIN',family:'FT_WINNER',seleccion:'AWAY',drawRule:'loss'}
 ].map(r => Object.freeze({...r, periodo:'FT',linea:null,segmentos:['N1','N2','N3']})));
 function definitions(document) {
     if (!document || !Array.isArray(document.markets)) throw Error('Invalid market definitions');

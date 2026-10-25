@@ -21,9 +21,9 @@ MARKETS = {
     "CORNERS_UNDER_105": ("UNDER", 10.5, ("N1", "N2", "N3", "N4")),
     "GOLES_OVER_25": ("OVER", 2.5, ("N1", "N2", "N3")),
     "CORNERS_LOCAL_GANA": ("HOME", None, ("N1", "N2", "N3")),
-    "AMBOS_MARCAN_SI": ("YES", None, ("N1", "N2", "N3")),
-    "GANADOR_FT_LOCAL": ("HOME", None, ("N1", "N2", "N3")),
-    "GANADOR_FT_VISITANTE": ("AWAY", None, ("N1", "N2", "N3")),
+    "BTTS_YES": ("YES", None, ("N1", "N2", "N3")),
+    "FT_HOME_WIN": ("HOME", None, ("N1", "N2", "N3")),
+    "FT_AWAY_WIN": ("AWAY", None, ("N1", "N2", "N3")),
 }
 
 

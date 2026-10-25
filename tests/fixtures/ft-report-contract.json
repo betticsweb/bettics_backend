@@ -2,7 +2,7 @@
   "note": "Synthetic score cases evaluated against actual uploaded report lambda expressions. Not historical approved rows or ROI evidence.",
   "reports": [
     {
-      "market": "AMBOS_MARCAN_SI",
+      "market": "BTTS_YES",
       "family": "BTTS",
       "selection": "YES",
       "source": "ambos_marcan",
@@ -48,7 +48,7 @@
       ]
     },
     {
-      "market": "GANADOR_FT_LOCAL",
+      "market": "FT_HOME_WIN",
       "family": "FT_WINNER",
       "selection": "HOME",
       "source": "gana_local",
@@ -94,7 +94,7 @@
       ]
     },
     {
-      "market": "GANADOR_FT_VISITANTE",
+      "market": "FT_AWAY_WIN",
       "family": "FT_WINNER",
       "selection": "AWAY",
       "source": "gana_visita",

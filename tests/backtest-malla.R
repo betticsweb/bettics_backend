@@ -1,6 +1,6 @@
 source('knime/r/extender_malla_backtest.R')
-row <- data.frame(match_id='1',fecha_partido='2026-01-01',liga='Liga',temporada='2026',mercado='AMBOS_MARCAN_SI',periodo='FT',seleccion='YES',linea=NA_real_,segmento='N1',cuota=1.8,version_politica='TEST',tipo_evaluacion='OOT',stringsAsFactors=FALSE)
-rule <- list(mercado='AMBOS_MARCAN_SI',version_politica='TEST',family='BTTS',seleccion='YES',linea=NULL,segmentos='N1',verified=TRUE,evidence='TEST FIXTURE ONLY')
+row <- data.frame(match_id='1',fecha_partido='2026-01-01',liga='Liga',temporada='2026',mercado='BTTS_YES',periodo='FT',seleccion='YES',linea=NA_real_,segmento='N1',cuota=1.8,version_politica='TEST',tipo_evaluacion='OOT',stringsAsFactors=FALSE)
+rule <- list(mercado='BTTS_YES',version_politica='TEST',family='BTTS',seleccion='YES',linea=NULL,segmentos='N1',verified=TRUE,evidence='TEST FIXTURE ONLY')
 fails <- function(expr) stopifnot(inherits(tryCatch({force(expr); NULL},error=function(e)e),'error'))
 stopifnot(nrow(extender_malla_backtest(row[FALSE,],row))==1)
 stopifnot(nrow(extender_malla_backtest(row,row))==1)

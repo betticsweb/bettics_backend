@@ -1,4 +1,5 @@
 const { withBacktestModel } = require('../services/backtest/store');
+const { additionalMarket } = require('../services/backtest/market-policies');
 const { FIELDS, MARKETS } = require('../services/backtest/contract');
 const { prepareBatch, ingest, initialSummary, BacktestError } = require('../services/backtest/ingest');
 function readQuery(query) {
@@ -6,7 +7,7 @@ function readQuery(query) {
     if (Object.keys(query).some(key => !allowed.includes(key)) || Object.values(query).some(value => typeof value !== 'string')) throw new BacktestError(400, 'FILTROS_INVALIDOS', 'Filtros no permitidos.');
     if (!query.version_politica || !query.tipo_evaluacion) throw new BacktestError(400, 'CONTEXTO_REQUERIDO', 'Indica version_politica y tipo_evaluacion para no mezclar evaluaciones.');
     for (const key of ['version_politica', 'tipo_evaluacion']) if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(query[key])) throw new BacktestError(400, 'FILTROS_INVALIDOS', 'Contexto inválido.');
-    if (query.match_id && !/^[1-9]\d{0,31}$/.test(query.match_id) || query.mercado && !Object.prototype.hasOwnProperty.call(MARKETS, query.mercado) || query.segmento && !['N1','N2','N3','N4'].includes(query.segmento)) throw new BacktestError(400, 'FILTROS_INVALIDOS', 'Filtro inválido.');
+    if (query.match_id && !/^[1-9]\d{0,31}$/.test(query.match_id) || query.mercado && !Object.prototype.hasOwnProperty.call(MARKETS, query.mercado) && !additionalMarket(query.mercado, query.version_politica) || query.segmento && !['N1','N2','N3','N4'].includes(query.segmento)) throw new BacktestError(400, 'FILTROS_INVALIDOS', 'Filtro inválido.');
     const page = query.page || '1', limit = query.limit || '50';
     if (!/^[1-9]\d{0,5}$/.test(page) || !/^[1-9]\d{0,2}$/.test(limit) || Number(limit) > 250) throw new BacktestError(400, 'PAGINACION_INVALIDA', 'Página positiva y límite entre 1 y 250 requeridos.');
     const filter = Object.fromEntries(['match_id', 'mercado', 'segmento', 'version_politica', 'tipo_evaluacion'].filter(key => query[key]).map(key => [key, query[key]]));

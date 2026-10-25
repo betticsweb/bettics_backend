@@ -8,9 +8,9 @@ Tres contratos adicionales aceptados directamente por el mismo validador y nodo 
 
 | mercado | periodo | seleccion | linea | segmentos estructurales |
 |---|---|---|---|---|
-| AMBOS_MARCAN_SI | FT | YES | null | N1,N2,N3 |
-| GANADOR_FT_LOCAL | FT | HOME | null | N1,N2,N3 |
-| GANADOR_FT_VISITANTE | FT | AWAY | null | N1,N2,N3 |
+| BTTS_YES | FT | YES | null | N1,N2,N3 |
+| FT_HOME_WIN | FT | HOME | null | N1,N2,N3 |
+| FT_AWAY_WIN | FT | AWAY | null | N1,N2,N3 |
 
 Esto valida el formato, NO certifica ni recalcula umbrales de aprobación. R sigue decidiendo qué filas aprobar y qué segmento asignar. Se conserva version_politica de la misma malla, tipo_evaluacion OOT, las 12 columnas y la identidad existente. Sin configuraciones adicionales ni paquetes nuevos. Los cuatro mercados previos y el upsert siguen igual.
 
@@ -51,3 +51,13 @@ Ninguno exige recomendaciones_hist.csv. Si una estrategia carece de salida OOT a
 5. Publicar el frontend compatible para Fiabilidad. No necesita cambiar el diseño ni calcular métricas nuevas: ya usa la misma API de Resultados.
 
 Pruebas automatizadas conservan los cuatro mercados y referencia Bundesliga. Las fórmulas de los tres adjuntos se contrastaron con 18 marcadores de prueba, con hashes y expresiones originales en tests/fixtures/ft-report-contract.json. No son resultados históricos nuevos. Evidencia real previa: docs/backtest-v70-verification.json. No se ejecutó carga, escritura MongoDB ni despliegue; los PR #4 permanecen preparados en borrador.
+
+## Corrección de códigos reales del ETL y publicación
+
+El lote de KNIME usa BTTS_YES, FT_HOME_WIN y FT_AWAY_WIN. Esos son los códigos canónicos de esta entrega; no se reescriben identificadores ni se crean aliases que pudieran duplicar una misma selección. Selecciones YES/HOME/AWAY, FT, linea null. Los cuatro códigos anteriores siguen sin cambios.
+
+Validación local HTTP autenticada: tres mercados por tres segmentos = 9 válidos, HTTP 200, escrituras false, cero llamadas al almacén; registrarMasivo permanece bloqueado HTTP 423. Es una prueba local con fixtures, no una confirmación del endpoint desplegado.
+
+La consulta administrativa a api.heroku.com desde el entorno devolvió 401 y no existe credencial Heroku disponible. No se pudo publicar ni obtener el release activo. scripts/publish-backtest-ft.ps1 prepara el commit portado sobre Heroku main, protege contra sobrescribir cambios del módulo, guarda respaldo y rollback y publica sin force. scripts/verify-ft-live.js usa el token solo dentro del dyno para hacer POST a validarMasivo (9 registros de validación, ninguno almacenado). Si falla la comprobación posterior se revierte al release inicial. No se modifica configuración ni se llama registrarMasivo.
+
+El commit que finalmente se publique en Heroku será el commit portado sobre su main, no necesariamente el SHA del PR. El script registra commit, release, validación y rollback en publicacion.json del respaldo privado. Hasta ejecutar y comprobar ese procedimiento no se afirma que esté publicado.

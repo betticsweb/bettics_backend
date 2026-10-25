@@ -4,7 +4,7 @@ extender_malla_backtest <- function(malla_actual, nuevos_aprobados) {
   campos <- c('match_id','fecha_partido','liga','temporada','mercado','periodo',
               'seleccion','linea','segmento','cuota','version_politica','tipo_evaluacion')
   identidad <- c('match_id','mercado','periodo','segmento','version_politica','tipo_evaluacion')
-  seleccion <- c(AMBOS_MARCAN_SI='YES',GANADOR_FT_LOCAL='HOME',GANADOR_FT_VISITANTE='AWAY')
+  seleccion <- c(BTTS_YES='YES',FT_HOME_WIN='HOME',FT_AWAY_WIN='AWAY')
   if (!identical(names(malla_actual),campos) || !identical(names(nuevos_aprobados),campos)) stop('Se requieren las mismas 12 columnas')
   if (!nrow(nuevos_aprobados)) return(malla_actual)
   for(i in seq_len(nrow(nuevos_aprobados))) {
