@@ -1,0 +1,13 @@
+{
+  "base_commit": "d64c9b169eae3364b0b43f1c70757546f4c3ad9c",
+  "candidate_commit": "bddfb0a92eade705963d534d4c319dd17b574931",
+  "legacy_files_preserved": 88,
+  "legacy_content_changes": [],
+  "integration": "Only exact additive server/collection registration; text CRLF normalized",
+  "production_dependencies_start_and_lockfiles_preserved": true,
+  "test_script_change_allowed": true,
+  "new_module_matches_candidate": true,
+  "network_calls": false,
+  "mongodb_operations": false,
+  "note": "This proves preservation against the supplied base, not that the base is the active Heroku release."
+}

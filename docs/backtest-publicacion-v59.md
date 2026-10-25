@@ -216,7 +216,19 @@ if ($BtValidation.estado -ne 'validado' -or $BtValidation.escrituras -ne $false 
 Remove-Variable BtHeaders,BtBody
 ```
 
-Este POST solo se ejecuta después del despliegue autorizado y contra la ruta nueva de validación. No se enviarán CSV reales ni se cambiará `DRY_RUN=True` de KNIME. La habilitación de carga y la creación de la colección/índices son una autorización separada.
+Este POST solo se ejecuta después del despliegue autorizado y contra la ruta nueva de validación. Con un JWT de usuario válido disponible solo en el entorno local, comprobar también la consulta nueva. Es lectura, no usa el token ETL ni crea la colección por defecto:
+
+```powershell
+if (-not $env:BETTICS_SMOKE_USER_JWT) { throw 'Falta la sesión de usuario para verificar la lectura autorizada.' }
+$BtReadHeaders = @{ Authorization = 'Bearer ' + $env:BETTICS_SMOKE_USER_JWT }
+$BtRead = Invoke-RestMethod -Method Get -Uri 'https://apianabet.herokuapp.com/api/backtest/aprobados?version_politica=BETTICS_20261024_V1&tipo_evaluacion=OOT&limit=1' -Headers $BtReadHeaders
+if ($BtRead.estado -ne 'ok') { throw 'Lectura del backtest no confirmada; no habilitar cargas.' }
+Remove-Variable BtReadHeaders
+```
+
+Un total cero es normal antes de la primera carga. Esto verifica el camino de lectura y compatibilidad de conexión; no certifica por sí solo el nombre/clúster MongoDB esperado. Esa comprobación sigue pendiente antes de autorizar una carga.
+
+No se enviarán CSV reales ni se cambiará `DRY_RUN=True` de KNIME. La habilitación de carga y la creación de la colección/índices son una autorización separada.
 
 ## 7. Reversión preparada a v59: NO ejecutada
 

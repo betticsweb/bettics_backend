@@ -1,0 +1,11 @@
+# Evidencia final previa a publicación
+
+- Base GitHub: d64c9b169eae3364b0b43f1c70757546f4c3ad9c. Se verificaron **88 archivos anteriores**, normalizando CRLF. No hay cambios de contenido en los archivos previos salvo el registro aditivo exacto del router/colección y el script npm test no productivo. Dependencias de producción, comando start y lockfile se conservan. Reporte: `backtest-github-preservation.json`.
+- Esta evidencia no equivale a una comparación del código histórico de Heroku v59. El usuario decidió omitir esa comparación completa. El preparado local sobre el clon de v59 ejecutará su propia verificación con esa base antes de aprobar el commit publicable.
+- Node: **21 pruebas aprobadas**, 0 fallidas; **1 entrada de integración MongoDB omitida** por no proporcionar `BACKTEST_TEST_MONGO_URI`. Comando: `npm test` con esa variable ausente. Las pruebas nuevas de HTTP usan Express local y almacenamiento falso, no MongoDB.
+- Python: **31 pruebas aprobadas**, incluyendo Legacy, empaquetado, comparación, preservación/portado local y probes GET. Comando: `python3 -m unittest discover -s tests -p 'test_*.py' -v`.
+- Sintaxis: verificación `node --check` en 9 archivos runtime/arranque, sin iniciar la aplicación.
+- Integración MongoDB real local: en una fase previa hubo una ejecución de 32 pruebas Node sin omisiones sobre MongoDB 7 aislado, incluyendo duplicados/concurrencia/errores parciales reales. **No se repitió esa integración en esta revisión**, por la instrucción de no escribir sobre MongoDB. No presentarla como validación del código desplegado ni de la base real de Heroku.
+- Servicio Heroku actual: cuatro GET sin token devolvieron 401; `backtest-v59-http-baseline.json` guarda únicamente método/path/status y hora. No prueba operaciones autenticadas ni registra respuestas con datos.
+- Protecciones: `BETTICS_BACKTEST_WRITES_ENABLED` deshabilitado por defecto; con token ETL válido, la carga bloqueada responde 423 antes del almacenamiento. `validarMasivo` comprueba el contrato y devuelve `escrituras: false` sin abrir el modelo, incluso con el gate habilitado. KNIME conserva `DRY_RUN=True` y detiene lotes ante un 423.
+- No se ejecutaron despliegue, rollback, cambios de Config Vars, apertura de dynos, cargas reales ni operaciones MongoDB en esta revisión. El PR permanece en borrador y master no se modifica.
