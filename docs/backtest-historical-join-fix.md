@@ -1,5 +1,14 @@
 # Corrección del cruce histórico de Resultados
 
+## Actualización con diagnóstico real de v69
+
+El propietario ejecutó el lector dentro de Heroku y compartió su salida. Evidencia resumida sin documentos ni credenciales: [backtest-v69-live-findings.json](backtest-v69-live-findings.json). Hay 19,812 aprobados y 15,967 partidos únicos. Se cruzan 15,653 pronósticos con 12,309 partidos de `eventosLigaProb`; todos están bloqueados por ausencia de confirmación final. Otros 4,159 pronósticos (3,658 IDs únicos) no tienen histórico asociado. Los 23,196 documentos de esa fuente poseen `idEvent` en texto y los cuatro campos de goles/córners numéricos, sin campo de estado. `eventosLiga` no tiene ID y `matchStatistics` solo agrega estadísticas. No se sustituirán sus IDs faltantes mediante cruces ambiguos de liga y fecha.
+
+La temporada de Bundesliga pertinente es 2026/2027: 30 aprobados, N1=18 y N2=12. Los ROI aún no estaban calculados en esa salida. `check-backtest-final-source.js` verifica primero los valores reales con un contrato de fuente propuesto, aislado del entorno activo; `activate-backtest-final-source.ps1` solo publica el ajuste si la comparación de los dos ROI coincide y la cohorte sigue intacta. Después vuelve a comprobar los datos con la configuración activa; si falla, restaura el contrato anterior y mantiene escrituras false. No se modifica el código desplegado ni documentos MongoDB. La activación usa `BETTICS_RESULTS_FINAL_FIELDS_CONFIRMED=eventosLigaProb`, una capacidad ya existente en v69. Marcadores inválidos, empates sin regla y partidos sin cruce permanecen pendientes.
+
+Las secciones siguientes documentan el estado previo al diagnóstico; la inspección de campos y la identificación de temporada ya están resueltas por esta evidencia. El cálculo y publicación de los ROI seguirán sin darse por confirmados hasta completar el chequeo.
+
+
 Rama `fix/backtest-historical-join`, basada en el PR #2 (código de consultas portado por el propietario a Heroku v68). No es una copia del repositorio Heroku Git. No contiene despliegues, cambios de MongoDB, índices ni ajustes de configuración en producción. El frontend y sus estilos no cambian.
 
 ## Lo comprobado y lo que falta comprobar
