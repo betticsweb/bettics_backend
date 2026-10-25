@@ -69,6 +69,21 @@ class ReleasePreparationTests(unittest.TestCase):
         module.prepare(self.target, self.base, self.candidate, self.source)
         (self.target/'app/controllers/existing.js').write_text('changed old API')
         with self.assertRaises(ValueError): module.verify(self.target, self.base, self.candidate, self.source)
+    def test_committed_tree_is_checked_not_only_a_restored_working_copy(self):
+        module.prepare(self.target, self.base, self.candidate, self.source)
+        commit(self.target)
+        report = module.verify(self.target, self.base, self.candidate, self.source)
+        self.assertTrue(report['committed_tree_verified'])
+        old = (self.target/'app/controllers/existing.js').read_text()
+        (self.target/'app/controllers/existing.js').write_text('changed committed API')
+        commit(self.target)
+        (self.target/'app/controllers/existing.js').write_text(old)
+        with self.assertRaises(ValueError): module.verify(self.target, self.base, self.candidate, self.source)
+    def test_extra_committed_files_outside_release_patch_are_rejected(self):
+        module.prepare(self.target, self.base, self.candidate, self.source)
+        (self.target/'unexpected.txt').write_text('not part of approved release')
+        commit(self.target)
+        with self.assertRaises(ValueError): module.verify(self.target, self.base, self.candidate, self.source)
     def test_verification_detects_subsequent_changes_to_new_module(self):
         module.prepare(self.target, self.base, self.candidate, self.source)
         (self.target/module.RUNTIME[0]).write_text('changed candidate')

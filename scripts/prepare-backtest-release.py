@@ -82,6 +82,12 @@ def verify(target, base, candidate_repo, candidate, allow_test_script_change=Fal
     target, candidate_repo = Path(target).resolve(strict=True), Path(candidate_repo).resolve(strict=True)
     base, candidate = sha(target, base), sha(candidate_repo, candidate)
     git(target, 'merge-base', '--is-ancestor', base, 'HEAD')
+    head = sha(target, 'HEAD')
+    committed = head != base
+    if committed and not allow_test_script_change:
+        changed = set(filter(None, git(target, 'diff', '--name-only', '-z', base, head).decode().split('\0')))
+        if changed - set(RUNTIME + SUPPORT + ('server.js', 'app/config/constantes.js')):
+            raise ValueError('Commit contains files outside the approved release patch')
     check_dependencies(target)
     paths = git(target, 'ls-tree', '-r', '--name-only', '-z', base).decode().split('\0')
     checked = 0
@@ -91,6 +97,8 @@ def verify(target, base, candidate_repo, candidate, allow_test_script_change=Fal
         if not path.is_file():
             raise ValueError('Legacy file missing: ' + name)
         actual = normalized(path.read_bytes())
+        if committed and actual != normalized(source(target, head, name)):
+            raise ValueError('Tested working tree differs from committed legacy code: ' + name)
         if name == 'server.js':
             for line in SERVER_LINES:
                 if actual.count(line.encode()) != 1:
@@ -111,10 +119,14 @@ def verify(target, base, candidate_repo, candidate, allow_test_script_change=Fal
             raise ValueError('Legacy code changed: ' + name)
         checked += 1
     for name in RUNTIME + SUPPORT:
-        if normalized(target_path(target, name).read_bytes()) != normalized(source(candidate_repo, candidate, name)):
+        actual = normalized(target_path(target, name).read_bytes())
+        if committed and actual != normalized(source(target, head, name)):
+            raise ValueError('New module is not committed as tested: ' + name)
+        if actual != normalized(source(candidate_repo, candidate, name)):
             raise ValueError('Candidate file does not match pinned source: ' + name)
     return {
         'base_commit': base, 'candidate_commit': candidate,
+        'target_commit': head, 'committed_tree_verified': committed,
         'legacy_files_preserved': checked, 'legacy_content_changes': [],
         'integration': 'Only exact additive server/collection registration; text CRLF normalized',
         'production_dependencies_start_and_lockfiles_preserved': True,

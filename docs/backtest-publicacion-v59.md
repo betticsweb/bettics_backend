@@ -113,7 +113,7 @@ Assert-BtExit 'integridad del patch'
 git -C $BtClone diff --stat
 ```
 
-La herramienta exige igualdad de los archivos fuente anteriores (normalizando solo CRLF) salvo las cuatro líneas aditivas. Además verifica que cada archivo nuevo sea el del candidato fijado. Esto acredita preservación del código contra **tu base v59 local** sin requerir una comparación manual completa de su historia. No prueba el comportamiento de terceros ni una base distinta de la indicada.
+Después del commit local, la herramienta comprueba también el árbol Git que se publicaría, exige que coincida con la copia probada y rechaza archivos confirmados fuera del patch permitido. La herramienta exige igualdad de los archivos fuente anteriores (normalizando solo CRLF) salvo las cuatro líneas aditivas. Además verifica que cada archivo nuevo sea el del candidato fijado. Esto acredita preservación del código contra **tu base v59 local** sin requerir una comparación manual completa de su historia. No prueba el comportamiento de terceros ni una base distinta de la indicada.
 
 Las pruebas incluidas en este bloque usan almacenamiento falso y transporte local/simulado, no MongoDB. La integración con MongoDB local fue probada en una fase anterior; en esta revisión no se repitió por la instrucción de no escribir sobre MongoDB. No se afirmará que las pruebas actuales validan los datos o la conexión real de Heroku.
 
