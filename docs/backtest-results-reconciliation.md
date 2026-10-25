@@ -1,6 +1,6 @@
-# Resultados históricos: conciliación previa
+# Resultados históricos: auditoría opcional
 
-Esta rama depende del módulo de carga del PR #1. No cambia rutas, modelos, ETL, índices ni configuración de producción. La auditoría no liquida pronósticos ni calcula ROI.
+La implementación posterior automatiza el cruce durante las consultas; esta auditoría queda como herramienta opcional y no es un requisito para usar la nueva pantalla. Esta rama depende del módulo de carga del PR #1. No cambia rutas, modelos, ETL, índices ni configuración de producción. La auditoría no liquida pronósticos ni calcula ROI.
 
 ## Hallazgos del código (todavía no de los datos reales)
 
