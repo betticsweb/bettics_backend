@@ -20,7 +20,7 @@ test('four market boundaries, zero and HOME/null are evaluated correctly',()=>{
  assert.equal(settle(home,[{...m,cornerKicksHome:5}]).estado,'pendiente');
 });
 test('missing, ambiguous, invalid, unsupported and non-final results never lose stake',()=>{
- for(const matches of [[],[m,m],[{...m,__status:undefined}],[{...m,__status:'SUSP'}],[{...m,__status:'CANC'}],[{...m,__status:'AET'}],[{...m,cornerKicksHome:null}],[{...m,cornerKicksHome:'0'}],[{...m,cornerKicksHome:-1}],[{...m,dateEvent:'2025-01-02'}],[{...m,strLeague:'Other'}]]){
+ for(const matches of [[],[m,{...m,cornerKicksHome:9}],[{...m,__status:undefined}],[{...m,__status:'SUSP'}],[{...m,__status:'CANC'}],[{...m,__status:'AET'}],[{...m,cornerKicksHome:null}],[{...m,cornerKicksHome:'no-data'}],[{...m,cornerKicksHome:-1}],[{...m,dateEvent:'2025-01-02'}],[{...m,strLeague:'Other'}]]){
   const result=settle(p,matches);assert.equal(result.estado,'pendiente');assert.equal(result.ganancia,null);assert.equal(result.unidades,0);
  }
  for(const change of [{cuota:null},{cuota:NaN},{mercado:'UNKNOWN'},{periodo:'HT'},{segmento:'N8'},{seleccion:'HOME'},{linea:7.5}]) assert.equal(settle({...p,...change},[m]).estado,'pendiente');
@@ -67,15 +67,15 @@ test('authenticated GET never accepts ETL secrets or malformed JWT and cannot in
   const response=await fetch(url,{headers:{Authorization:'Bearer '+token}});assert.equal(response.status,200);assert.equal((await response.json()).resumen.roi,50);assert.equal(reads,1);
  }finally{server.closeAllConnections();await new Promise(r=>server.close(r));if(old===undefined)delete process.env.BETTICS_READ_JWT_SECRET;else process.env.BETTICS_READ_JWT_SECRET=old;}
 });
-test('native loader uses projected batched reads, normalizes numeric IDs and shares cache without writes',async()=>{
+test('native loader streams each source once, normalizes numeric IDs and shares cache without writes',async()=>{
  const {createLoader}=require('../app/controllers/backtest-results');let connections=0,closed=0;const queries=[];
  const conn={asPromise:async()=>{},close:async()=>{closed++;},db:{collection(name){return{find(query,{projection}){
   queries.push({name,query,projection});
-  return{limit(){return this},maxTimeMS(){return this},toArray:async()=>name==='backtestAprobados'?[p]:[{...m,event_id:1,final_status:'FT'}]};
+  return{limit(){return this},maxTimeMS(){return this},toArray:async()=>[p],async *[Symbol.asyncIterator](){yield {...m,event_id:1,final_status:'FT'};}};
  }}}}};
  const load=createLoader(()=>{connections++;return conn;},{BETTICS_RESULTS_COLLECTION:'history',BETTICS_RESULTS_ID_FIELD:'event_id',BETTICS_RESULTS_STATUS_FIELD:'final_status'});
  const [a,b]=await Promise.all([load(),load()]);assert.equal(a,b);assert.equal(await load(),a);assert.equal(connections,1);assert.equal(closed,1);
- assert.deepEqual(queries[0].query,{tipo_evaluacion:'OOT'});assert.deepEqual(queries[1].query,{event_id:{$in:['1',1]}});assert.equal(queries[1].projection.final_status,1);assert.equal(a.matches.get('1')[0].__status,'FT');
+ assert.deepEqual(queries[0].query,{tipo_evaluacion:'OOT'});assert.deepEqual(queries[1].query,{});assert.equal(queries[1].projection.final_status,1);assert.equal(a.matches.get('1')[0].__status,'FT');
 });
 test('loader closes on errors, does not cache failures and rejects unsafe mapping',async()=>{
  const {createLoader}=require('../app/controllers/backtest-results');let closed=0;

@@ -1,5 +1,7 @@
 # Resultados históricos Backtest
 
+La rama de corrección del cruce actualiza la selección de fuentes, la normalización, los estados y el diagnóstico. Véase [backtest-historical-join-fix.md](backtest-historical-join-fix.md) para el contrato vigente y las limitaciones de validación real.
+
 Implementación aditiva del PR #1. No cambia el ETL, la carga, sus validaciones, rutas anteriores, secretos ni configuración de Heroku. No crea índices o colecciones ni escribe documentos.
 
 ## Consulta autenticada

@@ -1,31 +1,45 @@
 'use strict';
 const { MARKETS } = require('./contract');
+const { normalizeId, reconcileCandidates } = require('./history');
 const number = x => typeof x === 'number' && Number.isFinite(x);
 const score = x => number(x) && Number.isInteger(x) && x >= 0;
-function settle(p, matches) {
-    const pending = reason => ({ ...p, estado: 'pendiente', motivo: reason, ganancia: null, unidades: 0 });
+function settle(p, matches, policy = {}) {
+    const pending = (code, reason, extra = {}) => ({ ...p, estado: 'pendiente', cruce_confirmado: false, ...extra, codigo_pendiente: code, motivo: reason, ganancia: null, unidades: 0 });
     const market = MARKETS[p.mercado];
-    if (!market || p.periodo !== 'FT' || p.seleccion !== market.seleccion || p.linea !== market.linea || !market.segmentos.includes(p.segmento) || !number(p.cuota) || p.cuota <= 1) return pending('Pronóstico no evaluable');
-    if (matches.length !== 1) return pending(matches.length ? 'Cruce ambiguo' : 'Sin resultado asociado');
-    const m = matches[0];
-    if (m.strLeague !== p.liga || m.dateEvent !== p.fecha_partido) return pending('Liga o fecha sin conciliar');
-    const row = { ...p, partido: [m.strHomeTeam, m.strAwayTeam].filter(Boolean).join(' — ') };
-    // Only explicit, documented final status values; absent status never implies FT.
+    if (!market || p.periodo !== 'FT' || p.seleccion !== market.seleccion || p.linea !== market.linea || !market.segmentos.includes(p.segmento) || !number(p.cuota) || p.cuota <= 1) return pending('pronostico_invalido', 'Pronóstico no evaluable');
+    const linked = reconcileCandidates(p, matches);
+    if (!linked.match) return pending(linked.code, linked.reason, linked.details ? { detalle_conciliacion: linked.details } : {});
+    const m = linked.match;
+    const display = { cruce_confirmado: true, partido: [m.strHomeTeam, m.strAwayTeam].filter(Boolean).join(' — '), fuentes_resultado: m.__sources };
     const status = m.__status;
-    if (!['FT', 'AET', 'PEN'].includes(status)) return { ...pending('Resultado final no confirmado'), partido: row.partido };
-    if (status !== 'FT') return { ...pending('Período reglamentario sin confirmar'), partido: row.partido };
+    if (status && status !== 'FT') return pending('estado_no_evaluable', 'Estado no final, contradictorio o liquidación sin confirmar', display);
+    // Status-less legacy fields require an explicit source contract, never just an old date or a nonzero score.
+    if (!status && !m.__finalFieldsConfirmed) return pending('final_no_confirmado', 'Falta estado final o confirmación del contrato de marcadores históricos', display);
     const fields = p.mercado === 'GOLES_OVER_25' ? ['intHomeScore', 'intAwayScore'] : ['cornerKicksHome', 'cornerKicksAway'];
     const [h, a] = fields.map(f => m[f]);
-    if (!score(h) || !score(a)) return { ...pending('Marcador ausente o inválido'), partido: row.partido };
+    if (!score(h) || !score(a)) return pending('marcador_invalido', 'Marcador ausente o inválido: ' + fields.filter(f => !score(m[f])).join(', '), display);
+    if (fields.some(field => !m.__confirmedFields[field])) return pending('marcador_final_no_confirmado', 'Sin confirmación final para: ' + fields.filter(field => !m.__confirmedFields[field]).join(', '), display);
+    const row = { ...p, ...display, marcador: `${h}–${a}`, confirmacion_resultado: status ? 'estado_final' : 'contrato_historico_confirmado' };
+    if (p.mercado === 'CORNERS_LOCAL_GANA' && h === a) {
+        if (policy.drawRule === 'void') return { ...row, estado: 'anulado', motivo: 'Empate: devolución según regla confirmada', ganancia: 0, unidades: 0 };
+        if (policy.drawRule !== 'loss') return pending('empate_sin_regla', 'Empate en córners: liquidación sin confirmar', display);
+    }
     const win = p.mercado === 'CORNERS_OVER_85' ? h + a >= 9 : p.mercado === 'CORNERS_UNDER_105' ? h + a <= 10 : p.mercado === 'GOLES_OVER_25' ? h + a >= 3 : h > a;
-    if (p.mercado === 'CORNERS_LOCAL_GANA' && h === a) return { ...pending('Empate en córners: liquidación sin confirmar'), partido: row.partido };
-    return { ...row, estado: win ? 'acierto' : 'fallo', motivo: '', marcador: `${h}–${a}`, ganancia: win ? p.cuota - 1 : -1, unidades: 1 };
+    return { ...row, estado: win ? 'acierto' : 'fallo', motivo: '', ganancia: win ? p.cuota - 1 : -1, unidades: 1 };
 }
 function metrics(rows) {
     const resolved = rows.filter(r => r.unidades === 1);
+    const voids = rows.filter(r => r.estado === 'anulado').length;
     const gain = resolved.reduce((s, r) => s + r.ganancia, 0);
     const wins = resolved.filter(r => r.estado === 'acierto').length;
-    return { aprobados: rows.length, partidos: new Set(rows.map(r => r.match_id)).size, evaluados: resolved.length, pendientes: rows.length - resolved.length, aciertos: wins, efectividad: resolved.length ? wins / resolved.length * 100 : null, cuota_promedio: rows.filter(r => number(r.cuota)).length ? rows.filter(r => number(r.cuota)).reduce((s, r) => s + r.cuota, 0) / rows.filter(r => number(r.cuota)).length : null, ganancia: resolved.length ? gain : null, roi: resolved.length ? gain / resolved.length * 100 : null };
+    const odds = rows.filter(r => number(r.cuota) && r.cuota > 1);
+    return {
+        aprobados: rows.length, partidos: new Set(rows.map(r => normalizeId(r.match_id) || r.match_id)).size,
+        evaluados: resolved.length, pendientes: rows.filter(r => r.estado === 'pendiente').length, anulados: voids,
+        aciertos: wins, efectividad: resolved.length ? wins / resolved.length * 100 : null,
+        cuota_promedio: odds.length ? odds.reduce((s, r) => s + r.cuota, 0) / odds.length : null,
+        ganancia: resolved.length || voids ? gain : null, roi: resolved.length ? gain / resolved.length * 100 : null
+    };
 }
 function compare(a, b, key) {
     if (a[key] === null && b[key] === null) return 0;
@@ -43,11 +57,13 @@ function analyze(rows, query) {
     const ranking = grouped(filtered, ['mercado', 'liga']);
     ranking.sort((a,b) => compare(a,b,query.orden) || a.liga.localeCompare(b.liga));
     const days = grouped(filtered, ['fecha_partido']).sort((a,b) => a.fecha_partido.localeCompare(b.fecha_partido));
-    let profit = 0, units = 0;
-    const evolution = days.map(d => { profit += d.ganancia || 0; units += d.evaluados; return { fecha: d.fecha_partido, ganancia: units ? profit : null, roi: units ? profit / units * 100 : null }; });
+    let profit = 0, units = 0, settled = 0;
+    const evolution = days.map(d => { profit += d.ganancia || 0; units += d.evaluados; settled += d.evaluados + d.anulados; return { fecha: d.fecha_partido, ganancia: settled ? profit : null, roi: units ? profit / units * 100 : null }; });
     const monthly = grouped(filtered.map(r => ({ ...r, mes: r.fecha_partido.slice(0,7) })), ['mes']).sort((a,b) => a.mes.localeCompare(b.mes));
     const detail = [...filtered].sort((a,b) => b.fecha_partido.localeCompare(a.fecha_partido) || String(a.match_id).localeCompare(String(b.match_id)) || a.mercado.localeCompare(b.mercado) || a.segmento.localeCompare(b.segmento));
-    return { resumen: metrics(filtered), ranking, segmentos: grouped(filtered, ['mercado','segmento','liga']).sort((a,b) => compare(a,b,query.orden)), evolucion: evolution, mensual: monthly, detalle: { registros: detail.slice((query.page-1)*query.limit, query.page*query.limit), total: detail.length, page: query.page, limit: query.limit } };
+    const reasons = {};
+    for (const row of filtered) if (row.estado === 'pendiente') reasons[row.codigo_pendiente] = (reasons[row.codigo_pendiente] || 0) + 1;
+    return { conciliacion: { pronosticos: filtered.length, cruces_confirmados: filtered.filter(r => r.cruce_confirmado === true).length, motivos_pendientes: reasons }, resumen: metrics(filtered), ranking, segmentos: grouped(filtered, ['mercado','segmento','liga']).sort((a,b) => compare(a,b,query.orden)), evolucion: evolution, mensual: monthly, detalle: { registros: detail.slice((query.page-1)*query.limit, query.page*query.limit), total: detail.length, page: query.page, limit: query.limit } };
 }
 function parseQuery(q) {
     const allowed = ['mercado','segmento','liga','temporada','desde','hasta','version_politica','page','limit','orden'];
