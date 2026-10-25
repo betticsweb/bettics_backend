@@ -1,0 +1,49 @@
+{
+  "evidence": "Owner-provided verified production-mode output after activation of Heroku release v70",
+  "release": "v70",
+  "version": "BETTICS_20261024_V1",
+  "fuente_confirmada": true,
+  "escrituras": "false",
+  "resumen": {
+    "aprobados": 19812,
+    "partidos": 15967,
+    "evaluados": 15501,
+    "pendientes": 4311,
+    "anulados": 0,
+    "aciertos": 10482,
+    "efectividad": 67.62144377782079,
+    "cuota_promedio": 1.4421774682010886,
+    "ganancia": -595.9399999999963,
+    "roi": -3.844526159602583
+  },
+  "motivos": {
+    "sin_cruce": 4159,
+    "empate_sin_regla": 152
+  },
+  "bundesliga": {
+    "estado": "coincide",
+    "temporada": "2026/2027",
+    "total_observado": 30,
+    "N1": {
+      "aprobados": 18,
+      "evaluados": 18,
+      "aciertos": 16,
+      "ganancia": 3.5299999999999994,
+      "roi": 19.611111111111107,
+      "roi_esperado_redondeado": 19.6,
+      "coincide": true
+    },
+    "N2": {
+      "aprobados": 12,
+      "evaluados": 12,
+      "aciertos": 11,
+      "ganancia": 3.5900000000000003,
+      "roi": 29.916666666666668,
+      "roi_esperado_redondeado": 29.9,
+      "coincide": true
+    }
+  },
+  "apto_publicar": true,
+  "frontend_authenticated_visual_check": "not performed from cloud; backend production data verified by operator",
+  "rollback": "Restore the previous BETTICS_RESULTS_FINAL_FIELDS_CONFIRMED value using the locally generated rollback.ps1; keep BETTICS_BACKTEST_WRITES_ENABLED=false"
+}

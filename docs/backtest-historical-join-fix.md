@@ -1,5 +1,16 @@
 # Corrección del cruce histórico de Resultados
 
+## Cierre verificado en producción v70
+
+El propietario compartió la salida del modo `produccion_actual` después de la activación. [Evidencia resumida](backtest-v70-verification.json): 19,812 aprobados intactos, 15,501 evaluados, 10,482 aciertos, efectividad 67.62144377782079%, ganancia -595.9399999999963 unidades y ROI -3.844526159602583%. Los 4,311 pendientes se desglosan en 4,159 sin cruce y 152 empates HOME sin regla confirmada. No se forzaron pendientes a cero ni se interpretaron como pérdidas.
+
+La comparación obligatoria está cerrada para Germany Bundesliga, CORNERS_OVER_85, temporada 2026/2027: N1 tiene 18 aprobados, 16 aciertos, ganancia +3.53 y ROI +19.611111111111107%; N2 tiene 12 aprobados, 11 aciertos, ganancia +3.59 y ROI +29.916666666666668%. Ambos coinciden con el reporte original a un decimal (+19.6% y +29.9%). No se usó el histórico completo como última temporada.
+
+La causa fue un contrato de lectura incompleto: la clave `match_id -> eventosLigaProb.idEvent` sí enlaza los documentos, pero esa fuente histórica no conserva un campo de estado. La activación reconoce sus campos finales mediante `BETTICS_RESULTS_FINAL_FIELDS_CONFIRMED=eventosLigaProb`; los marcadores siguen validándose individualmente, con los mismos mercados y stake 1. La configuración de producción conserva `BETTICS_BACKTEST_WRITES_ENABLED=false`.
+
+No se cambió ni eliminó ningún documento MongoDB. La comprobación previa y posterior pasó con datos reales; el rollback de configuración quedó guardado en el equipo del propietario. La web existente consume automáticamente esta API al recargar Resultados; no se hizo una inspección visual con sesión autenticada desde el entorno cloud. Las secciones anteriores del trabajo conservadas abajo son antecedentes y no contradicen esta evidencia posterior.
+
+
 ## Actualización con diagnóstico real de v69
 
 El propietario ejecutó el lector dentro de Heroku y compartió su salida. Evidencia resumida sin documentos ni credenciales: [backtest-v69-live-findings.json](backtest-v69-live-findings.json). Hay 19,812 aprobados y 15,967 partidos únicos. Se cruzan 15,653 pronósticos con 12,309 partidos de `eventosLigaProb`; todos están bloqueados por ausencia de confirmación final. Otros 4,159 pronósticos (3,658 IDs únicos) no tienen histórico asociado. Los 23,196 documentos de esa fuente poseen `idEvent` en texto y los cuatro campos de goles/córners numéricos, sin campo de estado. `eventosLiga` no tiene ID y `matchStatistics` solo agrega estadísticas. No se sustituirán sus IDs faltantes mediante cruces ambiguos de liga y fecha.
