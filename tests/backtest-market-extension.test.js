@@ -7,14 +7,10 @@ const { settle, metrics } = require('../app/services/backtest/results');
 const p = {match_id:'1', fecha_partido:'2026-01-01', liga:'Liga', temporada:'2026', mercado:'TEST_BTTS', periodo:'FT', seleccion:'YES', linea:null, segmento:'N1', cuota:2, version_politica:'TEST', tipo_evaluacion:'OOT'};
 const rule = (family='BTTS', seleccion='YES', extra={}) => ({mercado:p.mercado, version_politica:'TEST', family, seleccion, linea:null, segmentos:['N1'], verified:true, evidence:'TEST FIXTURE ONLY', ...extra});
 const history = (h,a) => [{dateEvent:p.fecha_partido,strLeague:p.liga,intHomeScore:h,intAwayScore:a,__status:'FT'}];
-test('production contains no invented additional policies; unknown imports rejected', () => {
- assert.equal(configured.length,0); assert.ok(validateRecord(p).errors.length);
-});
-test('version, evidence, segments and unique selection/line identity fail closed', () => {
- for (const extra of [{verified:false},{evidence:''},{segmentos:[]},{segmentos:['N5']}]) assert.throws(()=>definitions({markets:[rule('BTTS','YES',extra)]}));
- assert.throws(()=>definitions({markets:[rule(),rule('BTTS','NO')]}));
- assert.equal(validateRecord(p,definitions({markets:[rule()]})).errors.length,0);
- assert.ok(validateRecord({...p,version_politica:'OTHER'},definitions({markets:[rule()]})).errors.length);
+test('three FT contracts accept existing CSV rows without an external approval manifest', () => {
+ assert.equal(configured.length,3);
+ for(const m of configured) assert.equal(validateRecord({...p,mercado:m.mercado,seleccion:m.seleccion}).errors.length,0);
+ assert.ok(validateRecord(p).errors.length);
 });
 test('BTTS YES uses FT goals, preserves zeros and rejects missing results', () => {
  const markets=definitions({markets:[rule()]});
@@ -48,5 +44,16 @@ test('three original report formulas agree with FT settlement for confirmed fixt
   }
   const absent=settle({...p,mercado:report.market,seleccion:report.selection},history(null,0),{markets});
   assert.equal(absent.estado,'pendiente');assert.equal(metrics([absent]).roi,null);
+ }
+});
+test('default FT contracts flow through existing settlement and metrics without policy setup',()=>{
+ const {parseQuery}=require('../app/services/backtest/results');
+ for(const market of configured) {
+  const prediction={...p,mercado:market.mercado,seleccion:market.seleccion};
+  assert.equal(parseQuery({mercado:prediction.mercado,segmento:'N1'}).mercado,prediction.mercado);
+  const row=settle(prediction,history(1,2));
+  assert.equal(row.estado,market.seleccion==='HOME'?'fallo':'acierto');
+  assert.equal(metrics([row]).evaluados,1);
+  assert.throws(()=>parseQuery({mercado:prediction.mercado,segmento:'N4'}));
  }
 });

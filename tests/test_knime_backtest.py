@@ -91,21 +91,14 @@ class KnimeTests(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
-class ExtendedPolicyTests(unittest.TestCase):
-    def test_additional_market_requires_explicit_versioned_policy(self):
-        row = dict(BASE, mercado="AMBOS_MARCAN_SI", seleccion="YES", linea=None)
-        with self.assertRaises(ValueError):
-            module.prepare_records(pd.DataFrame([row]))
-        policy = dict(mercado=row["mercado"], version_politica=row["version_politica"], family="BTTS", seleccion="YES", linea=None, segmentos=["N1"], verified=True, evidence="TEST FIXTURE ONLY")
-        self.assertEqual(module.prepare_records(pd.DataFrame([row]), {"markets":[policy]})[0]["seleccion"], "YES")
-        with self.assertRaises(ValueError):
-            module.prepare_records(pd.DataFrame([dict(row, segmento="N4")]), {"markets":[policy]})
-        with self.assertRaises(ValueError):
-            module.prepare_records(pd.DataFrame([row]), {"markets":[policy,policy]})
-
-    def test_ht_and_btts_no_are_out_of_scope_even_with_claimed_policy(self):
-        for family, selection, period in [("HT_WINNER", "HOME", "HT"), ("BTTS", "NO", "FT")]:
-            row = dict(BASE, mercado="UNSUPPORTED", seleccion=selection, periodo=period, linea=None)
-            policy = dict(mercado="UNSUPPORTED", version_politica=row["version_politica"], family=family, seleccion=selection, linea=None, segmentos=["N1"], verified=True, evidence="TEST ONLY", drawRule="loss")
+class ExtendedMarketTests(unittest.TestCase):
+    def test_new_markets_use_same_table_and_no_extra_manifest(self):
+        for market, selection in [("AMBOS_MARCAN_SI","YES"),("GANADOR_FT_LOCAL","HOME"),("GANADOR_FT_VISITANTE","AWAY")]:
+            row = dict(BASE, mercado=market, seleccion=selection, linea=None)
+            self.assertEqual(module.prepare_records(pd.DataFrame([row]))[0]["seleccion"], selection)
             with self.assertRaises(ValueError):
-                module.prepare_records(pd.DataFrame([row]), {"markets":[policy]})
+                module.prepare_records(pd.DataFrame([dict(row, segmento="N4")]))
+    def test_ht_and_btts_no_remain_excluded(self):
+        for row in [dict(BASE,mercado="AMBOS_MARCAN_NO"),dict(BASE,mercado="GANADOR_HT_LOCAL",periodo="HT")]:
+            with self.assertRaises(ValueError):
+                module.prepare_records(pd.DataFrame([row]))

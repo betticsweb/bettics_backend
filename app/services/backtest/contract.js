@@ -28,7 +28,7 @@ function validateRecord(input, policies) {
     if (typeof row.temporada !== 'string' || !row.temporada || row.temporada.length > 32) invalid('temporada', 'Texto no vacío de hasta 32 caracteres requerido.');
     const market = typeof row.mercado === 'string' && Object.prototype.hasOwnProperty.call(MARKETS, row.mercado) ? MARKETS[row.mercado] : additionalMarket(row.mercado, row.version_politica, policies);
     if (!market) invalid('mercado', 'Mercado no permitido.');
-    if (row.periodo !== (market?.periodo || 'FT')) invalid('periodo', 'Período incompatible con la política verificada.');
+    if (row.periodo !== (market?.periodo || 'FT')) invalid('periodo', 'Período incompatible con el mercado FT.');
     if (market && row.seleccion !== market.seleccion) invalid('seleccion', 'Selección incompatible con el mercado.');
     if (row.mercado === 'CORNERS_LOCAL_GANA' && (row.linea === '' || row.linea === undefined)) row.linea = null;
     if (market && row.linea !== market.linea) invalid('linea', 'Línea incompatible con el mercado; HOME requiere null.');
