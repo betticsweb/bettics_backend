@@ -8,6 +8,10 @@ function createRouter(handlers = controller, readAuth = validarJwt) {
     router.post('/api/backtest/registrarMasivo', etlAuth, writeGate, handlers.registrarMasivo);
     router.post('/api/backtest/validarMasivo', etlAuth, handlers.validarMasivo);
     router.get('/api/backtest/aprobados', readAuth, handlers.aprobados);
+    router.get('/api/backtest/resultados', require('../middleware/backtest-read-auth'), require('../controllers/backtest-results').handler);
+    for (const [section, handler] of Object.entries(require('../controllers/backtest-results').handlers)) {
+        router.get('/api/backtest/resultados/' + section, require('../middleware/backtest-read-auth'), handler);
+    }
     return router;
 }
 const router = createRouter();
