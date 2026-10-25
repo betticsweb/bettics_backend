@@ -68,6 +68,16 @@ class KnimeTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 module.run_backtest(pd.DataFrame([BASE]), dry_run=False, post=denied, sleep=lambda n: None)
             self.assertEqual(len(attempts), 1)
+    def test_disabled_server_gate_stops_before_sending_later_batches(self):
+        calls = []
+        def blocked(body, token):
+            calls.append(len(body['registros']))
+            return 423, {'estado': 'bloqueado', 'codigo': 'CARGA_DESHABILITADA', 'escrituras': False}
+        records = [dict(BASE, match_id=str(9100000+i)) for i in range(501)]
+        with patch.dict(os.environ, {'BETTICS_ETL_TOKEN': 'unit-test-only'}):
+            with self.assertRaises(ValueError):
+                module.run_backtest(pd.DataFrame(records), dry_run=False, post=blocked)
+        self.assertEqual(calls, [250])
     def test_live_mode_requires_explicit_boolean_and_token(self):
         with patch.dict(os.environ, {}, clear=True):
             with self.assertRaises(ValueError):

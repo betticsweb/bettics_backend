@@ -14,6 +14,24 @@ function readQuery(query) {
 }
 function createController(withModel = withBacktestModel) {
     return {
+        async validarMasivo(req, res) {
+            try {
+                if (!req.is('application/json')) throw new BacktestError(415, 'JSON_REQUERIDO', 'Content-Type application/json requerido.');
+                const batch = prepareBatch(req.body);
+                const validos = batch.received - batch.rejected.length;
+                return res.status(batch.rejected.length ? (validos ? 207 : 422) : 200).json({
+                    estado: batch.rejected.length ? (validos ? 'parcial' : 'rechazado') : 'validado',
+                    escrituras: false,
+                    resumen: { recibidos: batch.received, validos, rechazados: batch.rejected.length },
+                    claves_unicas: batch.groups.length,
+                    duplicados_identicos: validos - batch.groups.length,
+                    rechazos: batch.rejected
+                });
+            } catch (error) {
+                if (error instanceof BacktestError) return res.status(error.status).json({ estado: 'error', codigo: error.code, mensaje: error.message, escrituras: false });
+                return res.status(500).json({ estado: 'error', codigo: 'VALIDACION_NO_DISPONIBLE', escrituras: false });
+            }
+        },
         async registrarMasivo(req, res) {
             let batch;
             try {

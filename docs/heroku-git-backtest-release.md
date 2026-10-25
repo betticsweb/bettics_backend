@@ -1,5 +1,7 @@
 # Comparación y preparación de una publicación por Heroku Git
 
+**Actualización:** el usuario acepta continuar sin comparación histórica completa. El procedimiento vigente, con portado aditivo sobre v59, respaldo, gate deshabilitado y rollback exacto, está en [backtest-publicacion-v59.md](backtest-publicacion-v59.md). No se requiere ahora enviar un ZIP como condición para continuar. Las secciones siguientes conservan el procedimiento de comparación opcional anterior.
+
 ## Estado confirmado y pendientes
 
 El usuario confirmó en Heroku que `apianabet` usa **Heroku Git**, sin GitHub conectado directamente. Se conserva ese mecanismo. Esto identifica el destino, pero no demuestra qué repositorio fuente, revisión o rama produjo el release activo.

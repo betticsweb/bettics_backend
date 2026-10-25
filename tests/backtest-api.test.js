@@ -17,7 +17,7 @@ if (!uri) {
     let connection, model, server, url, withModel;
     const token = crypto.randomBytes(32).toString('hex');
     const jwtKey = crypto.randomBytes(32).toString('hex');
-    const originalToken = process.env.BETTICS_ETL_TOKEN, originalJwt = process.env.KEY_JWT;
+    const originalToken = process.env.BETTICS_ETL_TOKEN, originalJwt = process.env.KEY_JWT, originalWriteGate = process.env.BETTICS_BACKTEST_WRITES_ENABLED;
     before(async () => {
         const app = express();
         app.use(express.json({ limit: '20mb' }));
@@ -28,6 +28,7 @@ if (!uri) {
     });
     beforeEach(async () => {
         process.env.BETTICS_ETL_TOKEN = token;
+        process.env.BETTICS_BACKTEST_WRITES_ENABLED = 'true';
         process.env.KEY_JWT = jwtKey;
         const db = 'backtest_test_' + crypto.randomBytes(8).toString('hex');
         connection = await mongoose.createConnection(uri, { dbName: db, serverSelectionTimeoutMS: 5000, autoCreate: false, autoIndex: false }).asPromise();
@@ -43,6 +44,7 @@ if (!uri) {
     after(async () => {
         if (originalToken === undefined) delete process.env.BETTICS_ETL_TOKEN; else process.env.BETTICS_ETL_TOKEN = originalToken;
         if (originalJwt === undefined) delete process.env.KEY_JWT; else process.env.KEY_JWT = originalJwt;
+        if (originalWriteGate === undefined) delete process.env.BETTICS_BACKTEST_WRITES_ENABLED; else process.env.BETTICS_BACKTEST_WRITES_ENABLED = originalWriteGate;
         server.closeAllConnections();
         await new Promise(resolve => server.close(resolve));
     });

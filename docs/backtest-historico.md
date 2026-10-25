@@ -2,6 +2,8 @@
 
 ## Estado y alcance
 
+Procedimiento vigente: [publicación controlada sobre v59](backtest-publicacion-v59.md). El usuario acepta continuar sin comparación histórica manual completa. La carga está bloqueada por defecto y exige `BETTICS_BACKTEST_WRITES_ENABLED=true` además de autenticación; no se habilita en esta fase.
+
 Implementación aislada en `feature/backtest-historico`. No se ha desplegado ni enviado un lote real. No modifica los controladores, modelos ni rutas históricas existentes. La colección nueva es exactamente `backtestAprobados`; no se copian marcadores, córners históricos ni estadísticas de otras colecciones.
 
 El CSV aprobado por R tiene exactamente estos campos:
@@ -106,6 +108,12 @@ La suma de insertados, actualizados, sin_cambios, rechazados, pendientes e indet
 
 No se promete atomicidad de todo el lote. Los errores de escritura individuales confirmados se reflejan como rechazos y se preservan los éxitos del bulk no ordenado. Los errores no exponen cadenas de conexión ni detalles de credenciales.
 
+## Validación sin almacenamiento y bloqueo de cargas
+
+`POST /api/backtest/validarMasivo` usa el mismo contrato y token ETL, responde con `estado: validado`, contadores de validación y `escrituras: false`. No utiliza el modelo ni abre MongoDB, incluso con el gate habilitado. No significa que el lote esté cargado. KNIME conserva DRY_RUN local y no invoca esta ruta automáticamente.
+
+`POST /api/backtest/registrarMasivo` responde 423 `CARGA_DESHABILITADA` cuando `BETTICS_BACKTEST_WRITES_ENABLED` no es exactamente `true`, antes de abrir almacenamiento. Publicar el código o configurar el token no habilita la carga. Esta es una protección adicional al `DRY_RUN=True` del ETL.
+
 ## Consulta para la futura web de Resultados
 
 `GET /api/backtest/aprobados?version_politica=BETTICS_20261024_V1&tipo_evaluacion=OOT&page=1&limit=50`
@@ -155,7 +163,7 @@ npm ci
 npm test
 ```
 
-Para la suite completa, iniciar **un MongoDB local vacío y aislado**. Las pruebas rechazan URLs no loopback y usan bases aleatorias `backtest_test_<hex>`. Su limpieza elimina únicamente esas bases sintéticas, nunca una colección de la aplicación. No usar túneles a producción.
+El siguiente bloque describe pruebas de integración de una fase con escrituras sintéticas autorizadas. **No se ejecuta en esta revisión**, que no conecta a MongoDB. Para una suite completa futura autorizada, iniciar **un MongoDB local vacío y aislado**. Las pruebas rechazan URLs no loopback y usan bases aleatorias `backtest_test_<hex>`. Su limpieza elimina únicamente esas bases sintéticas, nunca una colección de la aplicación. No usar túneles a producción.
 
 ```sh
 docker run --detach --rm --name bettics-backtest-local-tests --publish 127.0.0.1::27017 mongo:7.0
@@ -175,3 +183,5 @@ Cobertura Python: DRY_RUN sin red, HOME/NaN/null, lotes de 250, validaciones, co
 ## Confirmación posterior del método de despliegue
 
 El usuario confirmó **Heroku Git**, sin integración GitHub directa. Se conserva ese mecanismo. La comparación del release activo y el procedimiento para aislar el patch están en [heroku-git-backtest-release.md](heroku-git-backtest-release.md). La inspección de Config Vars pasó a ser optativa (`--config-presence`); el chequeo de fuente no la necesita.
+
+En la revisión de publicación sobre v59 se ejecuta `npm test` con BACKTEST_TEST_MONGO_URI ausente: los tests MongoDB se marcan omitidos. Las comprobaciones HTTP de seguridad usan almacenamiento falso; las verificaciones de preservación de código y herramientas solo usan archivos y repositorios locales.
