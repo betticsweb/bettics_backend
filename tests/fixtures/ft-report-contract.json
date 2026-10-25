@@ -1,0 +1,143 @@
+{
+  "note": "Synthetic score cases evaluated against actual uploaded report lambda expressions. Not historical approved rows or ROI evidence.",
+  "reports": [
+    {
+      "market": "AMBOS_MARCAN_SI",
+      "family": "BTTS",
+      "selection": "YES",
+      "source": "ambos_marcan",
+      "sha256": "64f20ef5d8484eef301819cf37aed2a1614460df584222604868692ef0f3375e",
+      "profit_expression": "lambda row: float(row['cuotaSimple']) - 1 if row['golessLocal'] > 0 and row['golesVisitante'] > 0 else -1",
+      "cases": [
+        {
+          "home": 0,
+          "away": 0,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 0,
+          "away": 2,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 2,
+          "away": 0,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 1,
+          "away": 1,
+          "odds": 1.8,
+          "profit": 0.8
+        },
+        {
+          "home": 1,
+          "away": 3,
+          "odds": 1.8,
+          "profit": 0.8
+        },
+        {
+          "home": 3,
+          "away": 1,
+          "odds": 1.8,
+          "profit": 0.8
+        }
+      ]
+    },
+    {
+      "market": "GANADOR_FT_LOCAL",
+      "family": "FT_WINNER",
+      "selection": "HOME",
+      "source": "gana_local",
+      "sha256": "03d5d6e1ccbf8d4b8390f0c8f51ea5552af203c40b496cb71c3196d8b30f4fa5",
+      "profit_expression": "lambda row: float(row['cuotaSimple']) - 1 if row['golesLocal'] > row['golesVisitante'] else -1",
+      "cases": [
+        {
+          "home": 0,
+          "away": 0,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 0,
+          "away": 2,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 2,
+          "away": 0,
+          "odds": 1.8,
+          "profit": 0.8
+        },
+        {
+          "home": 1,
+          "away": 1,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 1,
+          "away": 3,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 3,
+          "away": 1,
+          "odds": 1.8,
+          "profit": 0.8
+        }
+      ]
+    },
+    {
+      "market": "GANADOR_FT_VISITANTE",
+      "family": "FT_WINNER",
+      "selection": "AWAY",
+      "source": "gana_visita",
+      "sha256": "f15c0091159192921b2db8a2a377eb39665490c190574096d4d94bcb921c35aa",
+      "profit_expression": "lambda row: float(row['cuotaSimple']) - 1 if row['golesVisitante'] > row['golesLocal'] else -1",
+      "cases": [
+        {
+          "home": 0,
+          "away": 0,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 0,
+          "away": 2,
+          "odds": 1.8,
+          "profit": 0.8
+        },
+        {
+          "home": 2,
+          "away": 0,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 1,
+          "away": 1,
+          "odds": 1.8,
+          "profit": -1
+        },
+        {
+          "home": 1,
+          "away": 3,
+          "odds": 1.8,
+          "profit": 0.8
+        },
+        {
+          "home": 3,
+          "away": 1,
+          "odds": 1.8,
+          "profit": -1
+        }
+      ]
+    }
+  ]
+}

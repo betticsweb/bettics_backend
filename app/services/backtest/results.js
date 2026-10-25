@@ -12,8 +12,6 @@ function settle(p, matches, policy = {}) {
     if (!linked.match) return pending(linked.code, linked.reason, linked.details ? { detalle_conciliacion: linked.details } : {});
     const m = linked.match;
     const display = { cruce_confirmado: true, partido: [m.strHomeTeam, m.strAwayTeam].filter(Boolean).join(' — '), fuentes_resultado: m.__sources };
-    // No HT fields have been verified in the historical source. Never fall back to FT.
-    if (p.periodo === 'HT') return pending('ht_no_disponible', 'No hay marcadores HT verificados en las fuentes históricas', display);
     const status = m.__status;
     if (status && status !== 'FT') return pending('estado_no_evaluable', 'Estado no final, contradictorio o liquidación sin confirmar', display);
     // Status-less legacy fields require an explicit source contract, never just an old date or a nonzero score.
@@ -31,7 +29,7 @@ function settle(p, matches, policy = {}) {
         if (market.drawRule === 'void') return { ...row, estado: 'anulado', motivo: 'Empate: devolución según política verificada', ganancia: 0, unidades: 0 };
         if (market.drawRule !== 'loss') return pending('empate_sin_regla', 'Empate: liquidación sin confirmar', display);
     }
-    const win = market.family === 'BTTS' ? (p.seleccion === 'YES' ? h > 0 && a > 0 : h === 0 || a === 0) : market.family === 'FT_WINNER' ? (p.seleccion === 'HOME' ? h > a : a > h) : p.mercado === 'CORNERS_OVER_85' ? h + a >= 9 : p.mercado === 'CORNERS_UNDER_105' ? h + a <= 10 : p.mercado === 'GOLES_OVER_25' ? h + a >= 3 : h > a;
+    const win = market.family === 'BTTS' ? (h > 0 && a > 0) : market.family === 'FT_WINNER' ? (p.seleccion === 'HOME' ? h > a : a > h) : p.mercado === 'CORNERS_OVER_85' ? h + a >= 9 : p.mercado === 'CORNERS_UNDER_105' ? h + a <= 10 : p.mercado === 'GOLES_OVER_25' ? h + a >= 3 : h > a;
     return { ...row, estado: win ? 'acierto' : 'fallo', motivo: '', ganancia: win ? p.cuota - 1 : -1, unidades: 1 };
 }
 function metrics(rows) {

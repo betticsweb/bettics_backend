@@ -37,24 +37,18 @@ def prepare_records(table, policies=None):
     import pandas as pd
     rules = (policies or {}).get("markets", [])
     seen_policies = set()
-    families = {"BTTS": ("YES", "NO"), "FT_WINNER": ("HOME", "AWAY"), "HT_WINNER": ("HOME", "AWAY"), "HT_GOALS": ("OVER", "UNDER")}
+    families = {"BTTS": ("YES",), "FT_WINNER": ("HOME", "AWAY")}
     for policy in rules:
         key = (policy.get("mercado"), policy.get("version_politica"))
         if key in seen_policies or key[0] in MARKETS or policy.get("verified") is not True or not str(policy.get("evidence") or "").strip():
             raise ValueError("Unverified or duplicate policy")
         seen_policies.add(key)
-        if policy.get("seleccion") not in families.get(policy.get("family"), ()) or not policy.get("segmentos") or any(s not in ("N1", "N2", "N3", "N4") for s in policy["segmentos"]):
+        if policy.get("seleccion") not in families.get(policy.get("family"), ()) or not policy.get("segmentos") or any(s not in ("N1", "N2", "N3") for s in policy["segmentos"]):
             raise ValueError("Invalid market selection/segments")
-        if policy["family"] == "HT_GOALS":
-            line = policy.get("linea")
-            if isinstance(line, bool) or not isinstance(line, (int, float)) or not math.isfinite(line) or line < 0 or line * 2 % 1 or policy.get("pushRule") not in ("void", "pending"):
-                raise ValueError("Unverified HT line/push rule")
-        elif policy.get("linea") is not None:
-            raise ValueError("Unexpected market line")
+        if policy.get("linea") is not None or policy.get("periodo", "FT") != "FT":
+            raise ValueError("Only FT without a numeric line is supported")
         if policy["family"] == "FT_WINNER" and policy.get("drawRule") != "loss":
             raise ValueError("FT 1X2 draws are losses, not draw-no-bet")
-        if policy["family"] in ("FT_WINNER", "HT_WINNER") and policy.get("drawRule") not in ("loss", "void", "pending"):
-            raise ValueError("Unverified draw rule")
     if set(table.columns) != set(FIELDS) or len(table.columns) != len(FIELDS):
         raise ValueError("input_table_1 must contain exactly the 12 approved CSV columns")
     records = []
@@ -96,9 +90,9 @@ def prepare_records(table, policies=None):
                     raise ValueError("Invalid " + field)
             extra = next((r for r in (policies or {}).get("markets", []) if r.get("mercado") == row["mercado"] and r.get("version_politica") == row["version_politica"]), None)
             if extra is not None:
-                if extra.get("verified") is not True or not extra.get("evidence") or extra.get("family") not in ("BTTS", "FT_WINNER", "HT_WINNER", "HT_GOALS"):
+                if extra.get("verified") is not True or not extra.get("evidence") or extra.get("family") not in ("BTTS", "FT_WINNER"):
                     raise ValueError("Unverified market policy")
-            if row["mercado"] not in MARKETS and extra is None or row["periodo"] != ("HT" if extra and extra["family"].startswith("HT_") else "FT"):
+            if row["mercado"] not in MARKETS and extra is None or row["periodo"] != "FT":
                 raise ValueError("Invalid market/period")
             selection, line, segments = MARKETS[row["mercado"]] if row["mercado"] in MARKETS else (extra["seleccion"], extra["linea"], extra["segmentos"])
             if row["seleccion"] != selection or row["segmento"] not in segments:

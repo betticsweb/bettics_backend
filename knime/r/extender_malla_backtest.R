@@ -14,10 +14,14 @@ extender_malla_backtest <- function(malla_actual, nuevos_aprobados, politicas_ve
       identical(p$version_politica, as.character(fila$version_politica)), politicas_verificadas)
     if (length(reglas) != 1L) stop('Politica ausente o ambigua')
     p <- reglas[[1]]
-    if (!isTRUE(p$verified) || is.null(p$evidence) || !nzchar(p$evidence) ||
+    if (!p$family %in% c('BTTS','FT_WINNER') ||
+        (p$family == 'BTTS' && p$seleccion != 'YES') ||
+        (p$family == 'FT_WINNER' && (!p$seleccion %in% c('HOME','AWAY') || !identical(p$drawRule,'loss'))) ||
+        any(!p$segmentos %in% c('N1','N2','N3')) || !is.null(p$linea) ||
+        !isTRUE(p$verified) || is.null(p$evidence) || !nzchar(p$evidence) ||
         !as.character(fila$segmento) %in% p$segmentos ||
         !identical(as.character(fila$seleccion), p$seleccion) ||
-        !identical(as.character(fila$periodo), if (startsWith(p$family,'HT_')) 'HT' else 'FT') ||
+        !identical(as.character(fila$periodo), 'FT') ||
         (is.null(p$linea) && !is.na(fila$linea)) ||
         (!is.null(p$linea) && (is.na(fila$linea) || fila$linea != p$linea)) ||
         !is.finite(fila$cuota) || fila$cuota <= 1 || fila$tipo_evaluacion != 'OOT')

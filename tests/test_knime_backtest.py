@@ -102,3 +102,10 @@ class ExtendedPolicyTests(unittest.TestCase):
             module.prepare_records(pd.DataFrame([dict(row, segmento="N4")]), {"markets":[policy]})
         with self.assertRaises(ValueError):
             module.prepare_records(pd.DataFrame([row]), {"markets":[policy,policy]})
+
+    def test_ht_and_btts_no_are_out_of_scope_even_with_claimed_policy(self):
+        for family, selection, period in [("HT_WINNER", "HOME", "HT"), ("BTTS", "NO", "FT")]:
+            row = dict(BASE, mercado="UNSUPPORTED", seleccion=selection, periodo=period, linea=None)
+            policy = dict(mercado="UNSUPPORTED", version_politica=row["version_politica"], family=family, seleccion=selection, linea=None, segmentos=["N1"], verified=True, evidence="TEST ONLY", drawRule="loss")
+            with self.assertRaises(ValueError):
+                module.prepare_records(pd.DataFrame([row]), {"markets":[policy]})

@@ -1,31 +1,53 @@
-# Ampliación de mercados: arquitectura y condiciones de activación
+# Ampliación FT: estado y fuentes, 2026-10-25
 
-Inspección previa a la implementación, 2026-10-25.
+Esta entrega sustituye el alcance anterior: HT queda excluido del contrato, modelo, adaptadores y navegación; BTTS No también queda fuera porque no aparece una estrategia correspondiente en los adjuntos. No se modifican las políticas ni las cifras de los cuatro mercados originales.
 
-La tabla madre continúa siendo DB_Analytic_Bet.backtestAprobados. El motor lee eventosLigaProb y eventosLiga mediante consultas proyectadas por colección, sin consultas individuales por partido ni escrituras. La unión validada es match_id -> idEvent; normalizeId conserva precisión, normaliza cadenas y números seguros. Se exige coincidencia de fecha y liga; resultados contradictorios o ausentes quedan pendientes. matchStatistics no constituye una fuente de marcadores individuales confirmada.
+## Arquitectura conservada
 
-Los campos finales verificados son intHomeScore/intAwayScore y cornerKicksHome/cornerKicksAway. La confirmación de producción corresponde a eventosLigaProb. No hay campos HT confirmados en la evidencia disponible; nunca se sustituirán por FT. Stake 1, ganancia cuota-1 para acierto y -1 para fallo; pendientes y anulados no entran en el denominador del ROI. Las reglas originales de los cuatro mercados se conservan.
+Madre: DB_Analytic_Bet.backtestAprobados. Resultados: eventosLigaProb, con la lectura adicional existente de eventosLiga. Unión validada match_id -> idEvent, con normalización segura de números/cadenas, fecha y liga concordantes, sin consultas individuales ni tablas nuevas. Goles FT: intHomeScore/intAwayScore y confirmación final existente. Ceros válidos; datos ausentes/contradictorios/no finales pendientes. HOME/AWAY 1X2: empate = fallo. Anulaciones oficiales sin contrato de liquidación confirmado permanecen pendientes. Stake 1, ganancia cuota-1/-1, pendientes fuera del ROI.
 
-## Activación controlada
+## Qué contienen realmente los adjuntos
 
-El catálogo adicional es declarativo y vacío por defecto: knime/backtest-market-policies.json. Solo se incorporan reglas con evidencia de política real revisada. Cada código representa una selección/línea única por versión: la identidad existente NO incluye selección ni línea, por lo que dos variantes nunca deben compartir código. No se cambia el índice ni se recalculan documentos existentes. El interruptor BETTICS_BACKTEST_WRITES_ENABLED continúa siendo false.
+Los tres .txt contienen scripts Python de generación de reportes, no HTML renderizados ni filas históricas. Leen ONEDRIVE/ProyectoApuestas/BackTest/ResultadosRecomendacionesHist/recomendaciones_hist.csv, ya producido por R. Los SHA-256 de los adjuntos, expresiones originales y casos de prueba están en tests/fixtures/ft-report-contract.json. No se ejecuta el código completo de los adjuntos ni sus escrituras.
 
-## Fuentes que faltan
+| Estrategia | Condición del reporte | Código/selección preparados |
+|---|---|---|
+| Ambos equipos marcan | valorOpcionApuesta=0.5, ambos goles >0 | AMBOS_MARCAN_SI / YES / FT / linea null |
+| Ganador del partido local | valorOpcionApuesta=1, goles local > visitante | GANADOR_FT_LOCAL / HOME / FT / linea null |
+| Ganador del partido visitante | valorOpcionApuesta=2, goles visitante > local | GANADOR_FT_VISITANTE / AWAY / FT / linea null |
 
-No están en los repositorios accesibles Generacion_Interfaces, Generacion_Malla_Backtest.R, sus CSV OOT ni el script R original. Para cada variante se necesitan: nombre real del mercado, selección y período, línea real (HT), segmentos aprobados, versión de política, columna de aprobación calculada por R, probabilidad OOT, cuota histórica de la selección, identificador, fecha, liga, temporada y regla de empate/anulación. Para HT además faltan nombres de campos históricos y evidencia de que contienen marcadores HT definitivos. No se presupone línea 0.5 ni disponibilidad de todas las selecciones N1–N4.
+Los resúmenes calculan ganancia individual con cuotaSimple. Algunos campos auxiliares utilizan cuotaCombinada: NO se utilizan para stake individual. Los scripts extraen N1–N4 de textos y dibujan niveles, pero no aplican los umbrales que originan la aprobación. Eso no verifica N4 ni ninguna condición N1–N3. El alcance nuevo admite exclusivamente N1–N3 que la política original acredite; no se activa ningún segmento por observar su etiqueta.
 
-El adaptador R entregado es aditivo: integra filas ya aprobadas y verificadas en la malla existente de 12 columnas. No reemplaza ni simula el generador original. Su conexión al generador queda pendiente de esos archivos. No se ejecutan cargas históricas nuevas.
+El tratamiento original de NaN en comparaciones puede producir fallo. No se replica: sin marcador confirmado el backend mantiene pendiente. Los casos comparados son fixtures con marcadores válidos, no evidencia de rentabilidad histórica real adicional.
 
-## Contrato preparado
+## Archivos y campos que aún faltan
 
-Cada entrada del manifiesto contiene `mercado`, `version_politica`, `family` (BTTS, FT_WINNER, HT_WINNER o HT_GOALS), `seleccion`, `linea`, `segmentos`, `verified: true` y `evidence` (referencia a la política original revisada). FT_WINNER requiere `drawRule: loss` porque es 1X2. HT_WINNER exige regla explícita loss/void/pending; HT_GOALS exige línea numérica real y pushRule void/pending. No se agrega ninguna política de ejemplo al manifiesto de producción.
+1. **Generacion_Interfaces**: fuente R de las aprobaciones, condiciones exactas N1/N2/N3 de cada selección, versiones, campos de entrada y origen prepartido de cuotas. No está en los repositorios accesibles ni en los tres adjuntos.
+2. **Generacion_Malla_Backtest.R** original: punto de consolidación/write.csv y mapeo de versión/temporada/selección. Se entrega un puente aditivo; no se fabrica un reemplazo del generador original.
+3. **recomendaciones_hist.csv**: match_id, liga, mercadoApuesta, opcionApuesta, valorOpcionApuesta, cuotaSimple, fechaJuego (días Unix), equipoLocal/equipoVisitante. No fue adjuntado. Los marcadores homeGoalCount/awayGoalCount del reporte no intervienen en generar aprobados ni se copian a MongoDB.
+4. **prob_modelo_goles_local_oot_v2.csv** (alternativa *_oot.csv): match_id, prob_local; **prob_modelo_goles_visita_oot_v2.csv** (alternativa *_oot.csv): match_id, prob_visita. Ambos reportados como fuentes BTTS. No se multiplican sus marginales ni se inventa probabilidad conjunta.
+5. **prob_modelo_gana_local_oot_v2.csv** y **prob_modelo_gana_visita_oot_v2.csv** (alternativas sin _v2): match_id y probabilidades. El código acepta prob_local/prob_gana_local/probLocal/probabilidad_local y sus equivalentes prob_visita/prob_gana_visita/probVisita/probabilidad_visita. Faltan los archivos para verificar sus columnas reales.
+6. **Trazabilidad temporal OOT**: origen/fold/corte de entrenamiento y momento de predicción/cuota frente al inicio del encuentro. Los scripts no aportan esos metadatos. Nombrar un CSV «oot» no demuestra ausencia de fuga temporal. También falta temporada en el contrato mínimo leído por esos scripts; no se deduce del año.
+7. Los **HTML renderizados** mencionados, o sus filas consolidadas, para contrastar conteos/ROI reales adicionales. Los adjuntos actuales permiten verificar fórmulas, no cifras ni aprobaciones.
 
-Códigos reservados de navegación: AMBOS_MARCAN_SI/NO, GANADOR_FT_LOCAL/VISITANTE, GANADOR_HT_LOCAL/VISITANTE. No certifican la existencia de políticas: el frontend comprueba el catálogo del backend antes de enviar filtros y bloquea porcentajes si no hay correspondencia. Goles HT permanece sin código de navegación hasta conocer selección/línea reales. No se interpreta «Más de 0.5» como BTTS sin contrato explícito.
+## Puente R preparado
 
-Operativo con políticas verificadas: validación de importación, BTTS y ganador FT, agregaciones existentes y enlaces a filtros persistentes. Pendiente: activar políticas auténticas y conectar el adaptador al generador R original. HT permanece pendiente incluso si se configura su política porque falta el mapeo histórico confirmado; no se declara implementada su evaluación con marcadores reales.
+Cargar extender_malla_backtest.R y preparar_malla_ft.R en el generador original. La secuencia preparada es:
 
-## Publicación y reversión
+```r
+nuevos <- preparar_malla_ft(recomendaciones_hist, evidencia_oot, politicas_verificadas)
+malla <- extender_malla_backtest(malla, nuevos, politicas_verificadas)
+# Después: el write.csv existente a bettics_backtest_aprobados.csv, sin otro archivo/colección.
+```
 
-Esta entrega se propone como PR en borrador. No se despliega ni se carga: no hay beneficio en activar mercados vacíos sin verificar la malla. Conservar Heroku Git/main, el release v70 y escrituras false. Antes de una publicación posterior portar únicamente los archivos nuevos/modificados del módulo sobre el código desplegado; nunca publicar el master de GitHub completo ni usar force. El frontend funciona también con el backend actual (sin catálogo adicional): muestra un aviso en vez de consultas incompatibles. No se añaden dependencias de producción ni índices.
+`evidencia_oot` es un contrato de integración pendiente de mapear desde los originales, NO un archivo encontrado: match_id, mercado, segmento, temporada, version_politica, tipo_evaluacion, aprobado (lógico verdadero de la regla R original), prob_local, prob_visita, cuota, prediccion_en, entrenamiento_hasta, cuota_en, inicio_partido. Las cuatro fechas requieren UTC ISO explícito y entrenamiento anterior a predicción, predicción/cuota anteriores al inicio. Se exige coincidencia de cuotaSimple, identidad y fecha. No se usan goles para decidir aprobaciones. Falta verificar estos datos reales antes de generar o cargar una malla nueva.
 
-Pruebas de liquidación adicionales utilizan exclusivamente fixtures, no datos reales nuevos. La referencia Bundesliga real permanece en docs/backtest-v70-verification.json; no se ejecutó una nueva consulta privada de producción. Las pruebas originales cubren los cuatro mercados y la comparación de referencia. No se modificó MongoDB.
+Se mantienen 12 columnas y la identidad existente (match_id, mercado, periodo, segmento, version_politica, tipo_evaluacion), carga incremental upsert sin borrar. Repeticiones idénticas no agregan filas; identidades contradictorias se rechazan.
+
+## Estado de publicación y comprobaciones
+
+El manifiesto knime/backtest-market-policies.json sigue vacío a propósito: no declara verificados umbrales que los reportes no contienen. Una entrada futura requiere mercado, versión, familia BTTS/FT_WINNER, selección, linea null, segmentos originales N1–N3, verified y referencia de evidencia; 1X2 drawRule=loss. El backend ya liquida estos FT con goles confirmados y todas las agregaciones existentes; el frontend consulta el catálogo antes de enviar filtros nuevos.
+
+Pruebas de fórmulas extraídas de los tres scripts sobre 18 marcadores de prueba, incluyendo ceros y empates; datos ausentes permanecen pendientes. Se conservan las pruebas de cuatro mercados y referencia Bundesliga. La evidencia real previa está en docs/backtest-v70-verification.json; no se afirma una nueva consulta privada de producción. Pruebas R verifican importación, cuotas, duplicados y rechazo de fuga temporal.
+
+No se ha desplegado ni cargado datos. Mantener Heroku Git/main, el release actual como punto de rollback, BETTICS_BACKTEST_WRITES_ENABLED=false y DRY_RUN=True. Los cambios siguen en PR #4 de backend y frontend; no se publica el master GitHub sobre Heroku ni se usa force. La activación y carga quedan pendientes exclusivamente de comprobar las fuentes anteriores.
