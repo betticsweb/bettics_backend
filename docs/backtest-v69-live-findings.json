@@ -1,0 +1,36 @@
+{
+  "source": "owner-provided read-only Heroku v69 diagnostic",
+  "approved_records": 19812,
+  "unique_matches": 15967,
+  "pending_reasons": {
+    "sin_cruce": 4159,
+    "final_no_confirmado": 15653
+  },
+  "matched_unique_ids": 12309,
+  "missing_unique_ids": 3658,
+  "source_counts": {
+    "eventosLigaProb": {
+      "records": 23196,
+      "matched_records": 12309,
+      "id_keys": [
+        "idEvent"
+      ],
+      "status_fields": []
+    },
+    "eventosLiga": {
+      "records": 6500,
+      "matched_records": 0,
+      "id_keys": [],
+      "status_fields": []
+    }
+  },
+  "bundesliga_reference_scope": {
+    "league": "Germany Bundesliga",
+    "season": "2026/2027",
+    "approved": 30,
+    "N1": 18,
+    "N2": 12,
+    "roi_verified": false
+  },
+  "writes_enabled": false
+}
