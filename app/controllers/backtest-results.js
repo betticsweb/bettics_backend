@@ -1,5 +1,6 @@
 'use strict';
 const { conectionManager } = require('../config/connection');
+const { configured } = require('../services/backtest/market-policies');
 const { FIELDS } = require('../services/backtest/contract');
 const { settle, analyze, parseQuery } = require('../services/backtest/results');
 const { normalizeId, sourceConfiguration, readHistory } = require('../services/backtest/history');
@@ -22,7 +23,7 @@ function createHandler(load = loadRows, section) {
             analysis.conciliacion.regla_empate_local = data.drawRule || 'pending';
             analysis.conciliacion.referencia_bundesliga = compareBundesligaReference(rows, query);
             const content = section ? { [section]: analysis[section] } : analysis;
-            return res.json({ ...content, opciones: options, version_politica: version, requiere_version: versions.length > 1 && !version, aviso: 'Simulación histórica retrospectiva OOT. Stake fijo de 1 unidad. Los pendientes no participan del ROI.', fuente: { coleccion: data.source, colecciones_consultadas: data.diagnostics ? Object.keys(data.diagnostics.fuentes) : [data.source], estado_configurado: data.statusConfigured }, generado: new Date().toISOString() });
+            return res.json({ ...content, catalogo_mercados: configured.map(r => Object.fromEntries(['mercado','version_politica','family','periodo','seleccion','linea','segmentos'].map(k => [k,r[k]]))), opciones: options, version_politica: version, requiere_version: versions.length > 1 && !version, aviso: 'Simulación histórica retrospectiva OOT. Stake fijo de 1 unidad. Los pendientes no participan del ROI.', fuente: { coleccion: data.source, colecciones_consultadas: data.diagnostics ? Object.keys(data.diagnostics.fuentes) : [data.source], estado_configurado: data.statusConfigured }, generado: new Date().toISOString() });
         } catch (_) { return res.status(503).json({ mensaje: 'No se pudieron consultar los resultados históricos. Inténtalo nuevamente.' }); }
     };
 }

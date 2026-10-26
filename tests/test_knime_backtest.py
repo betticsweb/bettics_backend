@@ -90,3 +90,15 @@ class KnimeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class ExtendedMarketTests(unittest.TestCase):
+    def test_new_markets_use_same_table_and_no_extra_manifest(self):
+        for market, selection in [("BTTS_YES","YES"),("FT_HOME_WIN","HOME"),("FT_AWAY_WIN","AWAY")]:
+            row = dict(BASE, mercado=market, seleccion=selection, linea=None)
+            self.assertEqual(module.prepare_records(pd.DataFrame([row]))[0]["seleccion"], selection)
+            with self.assertRaises(ValueError):
+                module.prepare_records(pd.DataFrame([dict(row, segmento="N4")]))
+    def test_ht_and_btts_no_remain_excluded(self):
+        for row in [dict(BASE,mercado="AMBOS_MARCAN_NO"),dict(BASE,mercado="GANADOR_HT_LOCAL",periodo="HT")]:
+            with self.assertRaises(ValueError):
+                module.prepare_records(pd.DataFrame([row]))
