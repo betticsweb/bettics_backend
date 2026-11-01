@@ -22,9 +22,9 @@ const verdict = (won, explanation) => ({estado:won?'ACIERTO':'FALLO',detalle:exp
 const noData = explanation => ({estado:'SIN_DATOS',detalle:explanation});
 const evaluate = (bet, match) => {
   if (!match) return noData('Partido no encontrado de forma inequívoca');
-  const finished = ['FINISHED','COMPLETED','FT','FULL_TIME','FINALIZADO']
-    .includes(String(match.status || match.matchStatus || '').toUpperCase());
-  if (!finished) return noData('Resultado disponible, pero falta confirmar el final oficial');
+  // Bettics ETL convention: an active row in eventosLigaProb with the
+  // required match statistics represents a completed match.
+  // The match must still be uniquely identified; missing statistics stay SIN_DATOS.
   const label = normalizeTeam(bet.mercadoApuesta).replace(/\s+n\d+\w*$/, '');
   const choice = normalizeTeam(bet.opcionApuesta);
   const line = Number(bet.valorOpcionApuesta);
