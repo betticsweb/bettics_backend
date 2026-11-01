@@ -6,8 +6,12 @@ const { replaceAll, reverse } = require('../shared/util')
 let cacheProvider = require('../shared/cache-provider')
 
 
-const normalizeTeam = value => String(value || '').normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, ' ').trim().toLowerCase();
+const normalizeTeam = value => String(value || '')
+  .replace(/Ã¡/g,'á').replace(/Ã©/g,'é').replace(/Ã­/g,'í').replace(/Ã³/g,'ó').replace(/Ãº/g,'ú')
+  .replace(/Ã±/g,'ñ').replace(/Ã£/g,'ã').replace(/Ã§/g,'ç').replace(/Ã¨/g,'è')
+  .replace(/Ã¢/g,'â').replace(/Ãª/g,'ê').replace(/Ã´/g,'ô')
+  .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-zA-Z0-9]+/g, ' ').trim().toLowerCase();
 const dateOnly = value => {
   const str = String(value || '');
   const iso = str.match(/^\d{4}-\d{2}-\d{2}/);
@@ -26,7 +30,7 @@ const evaluate = (bet, match) => {
   // required match statistics represents a completed match.
   // The match must still be uniquely identified; missing statistics stay SIN_DATOS.
   const label = normalizeTeam(bet.mercadoApuesta).replace(/\s+n\d+\w*$/, '');
-  const choice = normalizeTeam(bet.opcionApuesta);
+  const choice = normalizeTeam(bet.opcionApuesta).replace(/\\s+[12]$/, '');
   const line = Number(bet.valorOpcionApuesta);
   const home = normalizeTeam(bet.equipoLocal);
   const away = normalizeTeam(bet.equipoVisitante);
@@ -74,7 +78,8 @@ async function attachExistingResults(conn, groups) {
   if (!selections.length) return;
   const Event = getModel(conn, consta.SchemaName.eventosLigaProb);
   const leagues=[...new Set(selections.map(x=>x.liga).filter(Boolean))];
-  if (!leagues.length) return;
+  const dates=selections.map(x=>dateOnly(x.fechaJuego)).filter(Boolean);
+  if (!leagues.length || !dates.length) return;
   const events = await Event.collection.find({activo:true,strLeague:{$in:leagues}},
     {projection:{idEvent:1,strLeague:1,dateEvent:1,strHomeTeam:1,strAwayTeam:1,
       intHomeScore:1,intAwayScore:1,cornerKicksHome:1,cornerKicksAway:1,status:1,matchStatus:1}}).toArray();
@@ -87,7 +92,7 @@ async function attachExistingResults(conn, groups) {
   for(const bet of selections) {
     const candidates=index.get(keyFor(bet.liga,bet.equipoLocal,bet.equipoVisitante,bet.fechaJuego))||[];
     if(candidates.length!==1||!candidates[0].idEvent) {
-      bet.evaluacionResultado=noData(candidates.length>1?'Partido ambiguo':'Partido sin cruce único');
+      bet.evaluacionResultado=noData(candidates.length>1?'Partido ambiguo':'Partido sin cruce único: revisar liga, equipos y fecha');
     } else {
       const match=candidates[0];
       bet.evaluacionResultado=evaluate(bet,match);
