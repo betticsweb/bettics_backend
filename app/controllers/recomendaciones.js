@@ -24,7 +24,7 @@ const resultOf = (bet, match) => {
   if (!match) return {estado:'SIN_DATOS',detalle:'Sin coincidencia única de estadísticas'};
   const official = String(match.status || match.matchStatus || '').toUpperCase();
   const completed = ['FINISHED','COMPLETED','FT','FULL_TIME','FINALIZADO'].includes(official);
-  if (!completed) return {estado:'PENDIENTE',detalle:'Hay estadísticas del partido, pero falta confirmar su finalización oficial',
+  if (!completed) return {estado:'SIN_DATOS',detalle:'Hay estadísticas del partido, pero falta confirmar su finalización oficial',
     marcador:validCount(match.intHomeScore)&&validCount(match.intAwayScore)?[match.intHomeScore,match.intAwayScore]:null,
     corners:validCount(match.cornerKicksHome)&&validCount(match.cornerKicksAway)?[match.cornerKicksHome,match.cornerKicksAway]:null};
   return {estado:'SIN_DATOS',detalle:'Datos finales vinculados; mercado pendiente de normalización verificada'};
@@ -94,11 +94,13 @@ exports.getCriterio = async(req, res, next) => {
 
         const cacheKey = consta.cacheController.recomendaciones.byGetCriterio;
         const recomentacionesCache = await cacheProvider.instance().get(cacheKey);
-        if (recomentacionesCache)
+        if (recomentacionesCache) {
+            await attachExistingResults(conn, recomentacionesCache);
             return res.send({
                 resStatus: 'ok',
                 resResult: recomentacionesCache
-            })
+            });
+        }
 
         if (req.query.pageNumber != undefined) options.page = req.query.pageNumber;
         if (req.query.pageSize != undefined) options.limit = req.query.pageSize;
