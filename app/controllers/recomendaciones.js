@@ -36,34 +36,34 @@ const evaluate = (bet, match) => {
   const away = normalizeTeam(bet.equipoVisitante);
   const score = count(match.intHomeScore) && count(match.intAwayScore);
   const corners = count(match.cornerKicksHome) && count(match.cornerKicksAway);
-  const compare = (n, name) => {
+  const compare = (n, name, resultText) => {
     if (!Number.isFinite(line)) return noData('Línea de apuesta inválida');
-    if (n === line) return {estado:'DEVOLUCION',detalle:name+' '+n+' igual a la línea '+line};
-    if (choice==='mas de') return verdict(n>line,name+' '+n+' > '+line);
-    if (choice==='menos de') return verdict(n<line,name+' '+n+' < '+line);
+    if (n === line) return {estado:'DEVOLUCION',detalle:resultText+' (igual a la línea '+line+')'};
+    if (choice==='mas de') return verdict(n>line,resultText);
+    if (choice==='menos de') return verdict(n<line,resultText);
     return noData('Operador de apuesta desconocido');
   };
   // Only recognized production-market identities; N1-N4 indicate strategy,
   // not distinct result rules.
   if (label.startsWith('total de tiros de esquina')) {
     if (!corners) return noData('Faltan córners oficiales');
-    return compare(match.cornerKicksHome+match.cornerKicksAway,'Córners totales');
+    return compare(match.cornerKicksHome+match.cornerKicksAway,'Córners totales','Córners: '+match.cornerKicksHome+' - '+match.cornerKicksAway);
   }
   if (label.startsWith('equipo con mas corners')) {
     if (!corners) return noData('Faltan córners oficiales');
-    if (match.cornerKicksHome===match.cornerKicksAway) return verdict(false,'Empate de córners '+match.cornerKicksHome+' - '+match.cornerKicksAway+' (mercado 1X2)');
+    if (match.cornerKicksHome===match.cornerKicksAway) return verdict(false,'Córners: '+match.cornerKicksHome+' - '+match.cornerKicksAway+' (empate, mercado 1X2)');
     if (choice!==home && choice!==away) return noData('Selección no identificada');
     const winner=match.cornerKicksHome>match.cornerKicksAway?home:away;
-    return verdict(choice===winner,'Córners '+match.cornerKicksHome+' - '+match.cornerKicksAway);
+    return verdict(choice===winner,'Córners: '+match.cornerKicksHome+' - '+match.cornerKicksAway);
   }
   if (label.startsWith('total de goles')) {
     if (!score) return noData('Falta marcador final');
-    return compare(match.intHomeScore+match.intAwayScore,'Goles totales');
+    return compare(match.intHomeScore+match.intAwayScore,'Goles totales','Marcador: '+match.intHomeScore+' - '+match.intAwayScore);
   }
   if (label.startsWith('ambos equipos marcan')) {
     if (!score) return noData('Falta marcador final');
     if (choice!=='mas de' || line!==0.5) return noData('Selección BTTS no reconocida');
-    return verdict(match.intHomeScore>0&&match.intAwayScore>0,'Marcador '+match.intHomeScore+' - '+match.intAwayScore);
+    return verdict(match.intHomeScore>0&&match.intAwayScore>0,'Marcador: '+match.intHomeScore+' - '+match.intAwayScore);
   }
   if (label.startsWith('ganador del partido')) {
     if (!score) return noData('Falta marcador final');
