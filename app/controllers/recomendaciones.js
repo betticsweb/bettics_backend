@@ -30,7 +30,7 @@ const evaluate = (bet, match) => {
   // required match statistics represents a completed match.
   // The match must still be uniquely identified; missing statistics stay SIN_DATOS.
   const label = normalizeTeam(bet.mercadoApuesta).replace(/\s+n\d+\w*$/, '');
-  const choice = normalizeTeam(bet.opcionApuesta).replace(/\\s+[12]$/, '');
+  const choice = normalizeTeam(bet.opcionApuesta).replace(/\s+[12]$/, '');
   const line = Number(bet.valorOpcionApuesta);
   const home = normalizeTeam(bet.equipoLocal);
   const away = normalizeTeam(bet.equipoVisitante);
@@ -51,7 +51,7 @@ const evaluate = (bet, match) => {
   }
   if (label.startsWith('equipo con mas corners')) {
     if (!corners) return noData('Faltan córners oficiales');
-    if (match.cornerKicksHome===match.cornerKicksAway) return noData('Empate de córners: verificar reglas de liquidación');
+    if (match.cornerKicksHome===match.cornerKicksAway) return verdict(false,'Empate de córners '+match.cornerKicksHome+' - '+match.cornerKicksAway+' (mercado 1X2)');
     if (choice!==home && choice!==away) return noData('Selección no identificada');
     const winner=match.cornerKicksHome>match.cornerKicksAway?home:away;
     return verdict(choice===winner,'Córners '+match.cornerKicksHome+' - '+match.cornerKicksAway);
@@ -76,31 +76,41 @@ const evaluate = (bet, match) => {
 async function attachExistingResults(conn, groups) {
   const selections = groups.flatMap(group => group.detalle || []);
   if (!selections.length) return;
+  // Match by both teams and calendar day. Require a unique event ID, never
+  // rely solely on an approximate name/league match.
   const Event = getModel(conn, consta.SchemaName.eventosLigaProb);
-  const leagues=[...new Set(selections.map(x=>x.liga).filter(Boolean))];
-  const dates=selections.map(x=>dateOnly(x.fechaJuego)).filter(Boolean);
-  if (!leagues.length || !dates.length) return;
-  const events = await Event.collection.find({activo:true,strLeague:{$in:leagues}},
-    {projection:{idEvent:1,strLeague:1,dateEvent:1,strHomeTeam:1,strAwayTeam:1,
-      intHomeScore:1,intAwayScore:1,cornerKicksHome:1,cornerKicksAway:1,status:1,matchStatus:1}}).toArray();
-  const index=new Map();
-  for (const event of events) {
-    const key=keyFor(event.strLeague,event.strHomeTeam,event.strAwayTeam,event.dateEvent);
-    if(!index.has(key)) index.set(key,[]);
-    index.get(key).push(event);
+  const dateSet=new Set(selections.map(b=>dateOnly(b.fechaJuego)).filter(Boolean));
+  const events=await Event.collection.find({activo:true},{
+    projection:{idEvent:1,strLeague:1,dateEvent:1,strHomeTeam:1,strAwayTeam:1,
+      intHomeScore:1,intAwayScore:1,cornerKicksHome:1,cornerKicksAway:1}
+  }).toArray();
+  const exact=new Map(), fixture=new Map();
+  const add=(map,key,event)=>{
+    if (!map.has(key)) map.set(key,[]);
+    map.get(key).push(event);
+  };
+  for (const e of events) {
+    if (!dateSet.has(dateOnly(e.dateEvent))) continue;
+    const basic=keyFor('',e.strHomeTeam,e.strAwayTeam,e.dateEvent);
+    add(exact,keyFor(e.strLeague,e.strHomeTeam,e.strAwayTeam,e.dateEvent),e);
+    add(fixture,basic,e);
   }
+  const unique=rows=>{
+    const seen=new Map();
+    for(const row of rows) if(row.idEvent) seen.set(String(row.idEvent),row);
+    return [...seen.values()];
+  };
   for(const bet of selections) {
-    const candidates=index.get(keyFor(bet.liga,bet.equipoLocal,bet.equipoVisitante,bet.fechaJuego))||[];
-    if(candidates.length!==1||!candidates[0].idEvent) {
-      bet.evaluacionResultado=noData(candidates.length>1?'Partido ambiguo':'Partido sin cruce único: revisar liga, equipos y fecha');
-    } else {
-      const match=candidates[0];
-      bet.evaluacionResultado=evaluate(bet,match);
-      bet.resultadoReferencia={matchId:String(match.idEvent)};
+    const primary=unique(exact.get(keyFor(bet.liga,bet.equipoLocal,bet.equipoVisitante,bet.fechaJuego))||[]);
+    const candidates=primary.length?primary:unique(fixture.get(keyFor('',bet.equipoLocal,bet.equipoVisitante,bet.fechaJuego))||[]);
+    if(candidates.length!==1) {
+      bet.evaluacionResultado=noData(candidates.length>1?'Coincidencia ambigua de partidos':'Sin cruce único por equipos y fecha');
+      continue;
     }
+    bet.evaluacionResultado=evaluate(bet,candidates[0]);
+    bet.resultadoReferencia={matchId:String(candidates[0].idEvent)};
   }
 }
-
 const options = {
     page: 1,
     limit: 10,
