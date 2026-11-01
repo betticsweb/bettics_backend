@@ -9,6 +9,13 @@ const recomendacionesSchema = new Schema({
         required: true
     },
 
+    // Optional canonical game ID for future ETL uploads. Historical rows without this
+    // field remain unlinked and must never be joined by names or dates.
+    match_id: { type: String, default: null },
+    mercadoCodigo: { type: String, default: null },
+    operadorCodigo: { type: String, default: null },
+    seleccionCodigo: { type: String, default: null },
+    lineaNumero: { type: Number, default: null },
     id_apuesta_simple: {
         type: String
     },
