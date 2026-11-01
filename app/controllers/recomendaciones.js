@@ -176,7 +176,7 @@ exports.getCriterio = async(req, res, next) => {
             const data = await Recomendaciones.find({
                 id_apuesta_combinada: element._id.id_apuesta_combinada,
                 activo: true
-            }).select("_id id_apuesta_combinada id_apuesta_simple tipoApuesta liga equipoLocal equipoVisitante pais mercadoApuesta opcionApuesta valorOpcionApuesta cuotaSimple cuotaCombinada fechaRegistro fechaJuego match_id mercadoCodigo operadorCodigo seleccionCodigo lineaNumero")
+            }).select("_id id_apuesta_combinada id_apuesta_simple tipoApuesta liga equipoLocal equipoVisitante pais mercadoApuesta opcionApuesta valorOpcionApuesta cuotaSimple cuotaCombinada fechaRegistro fechaJuego match_id mercadoCodigo operadorCodigo seleccionCodigo lineaNumero").lean()
             lista_id_apuesta_combinada[index].detalle = data
         }
 
