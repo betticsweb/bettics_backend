@@ -14,6 +14,7 @@ module.exports = Object.freeze({
         Group: 'group',
     },
     SchemaName: {
+        backtestAprobados: "backtestAprobados",
         usuario: "usuario",
         ubigeo: "ubigeo",
         estado: "estado",

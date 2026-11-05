@@ -1,0 +1,31 @@
+{
+  "app": "apianabet",
+  "captured_at_utc": "2026-10-25T00:37:54.124813+00:00",
+  "scope": "Unauthenticated GET routing/authentication only; not functional or database validation",
+  "release_verified_by_probe": false,
+  "all_guards_present": true,
+  "checks": [
+    {
+      "method": "GET",
+      "path": "/api/eventosLiga/getMaestros",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/eventosLiga/getTemporadas?strLeague=__BETTICS_SMOKE__",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/recomendaciones/getCriterio",
+      "status": 401
+    },
+    {
+      "method": "GET",
+      "path": "/api/resultados/getCriterio",
+      "status": 401
+    }
+  ],
+  "post_requests": 0,
+  "credentials_sent": false
+}

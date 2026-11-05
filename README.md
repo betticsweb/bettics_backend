@@ -24,3 +24,9 @@ git remote add heroku apianabet
 heroku git:remote -a apianabet
 npm install --force --legacy-peer-deps
 git push heroku main
+
+## Backtest Histórico
+
+Implementación y contrato en [docs/backtest-historico.md](docs/backtest-historico.md). Incluye carga idempotente, autenticación ETL, lectura para Resultados, pruebas y pasos para confirmar la app Heroku. No desplegar ni ejecutar cargas reales sin autorización.
+
+Publicación preparada por Heroku Git sobre v59, sin despliegue ejecutado: [comandos, respaldo y rollback](docs/backtest-publicacion-v59.md). La API de carga permanece bloqueada por defecto.
